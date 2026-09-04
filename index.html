@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MANUSTRY - Your KJV Bible Study Tool at Hand</title>
+    <meta name="description" content="MANUSTRY is a free KJV-based Bible study platform designed to place biblical wisdom directly into every believer's hand." />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+    <!-- ============================================================ -->
+    <!-- BACKGROUND WATERMARK (Fixed, behind everything) -->
+    <!-- ============================================================ -->
+    <div class="bg-watermark" aria-hidden="true">
+        <img src="https://images.unsplash.com/photo-1544903352-06ef4e28df8b?w=800&q=80" alt="" />
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- FIXED HEADER -->
+    <!-- ============================================================ -->
+    <header class="site-header">
+        <div class="header-inner">
+            <!-- Left: Branding -->
+            <div class="header-brand">
+                <a href="/" class="logo">
+                    <span class="logo-icon">✝</span>
+                    <span class="logo-text">MANUSTRY</span>
+                </a>
+            </div>
+
+            <!-- Center: Navigation -->
+            <nav class="header-nav">
+                <a href="/" class="nav-link active">Home</a>
+                <a href="#writer" class="nav-link">Writer</a>
+                <a href="#tools" class="nav-link">Tools</a>
+                <a href="#devotion" class="nav-link">Devotion</a>
+                <a href="#bookshelf" class="nav-link">Bookshelf</a>
+                <a href="#about" class="nav-link">About</a>
+            </nav>
+
+            <!-- Right: Sign In / Admin -->
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="btn-signin" id="signInBtn">
+                    <i class="fas fa-user"></i> Sign In
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- MAIN WRAPPER (with padding guardrails) -->
+    <!-- ============================================================ -->
+    <main class="main-wrapper">
+
+        <!-- ============================================================ -->
+        <!-- HERO SECTION -->
+        <!-- ============================================================ -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="hero-sub-label">MANUSTRY</span>
+                    Your <span class="highlight-gold">KJV Bible Study</span> Tool at Hand
+                </h1>
+                <p class="hero-greeting" id="greeting">Welcome, Friend</p>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- TRY ASKING SECTION (Prompt Chips) -->
+        <!-- ============================================================ -->
+        <section class="prompts-section">
+            <h2 class="section-label">TRY ASKING</h2>
+            <div class="prompts-grid" id="promptsGrid">
+                <button class="prompt-chip" data-prompt="Does the Bible forbid us to pray to Mary?">
+                    Does the Bible forbid us to pray to Mary?
+                </button>
+                <button class="prompt-chip" data-prompt="Explain the book of Revelation">
+                    Explain the book of Revelation
+                </button>
+                <button class="prompt-chip" data-prompt="Create a preaching message about sin">
+                    Create a preaching message about sin
+                </button>
+                <button class="prompt-chip" data-prompt="What is the unpardonable sin?">
+                    What is the unpardonable sin?
+                </button>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- AI CHAT WORKSPACE -->
+        <!-- ============================================================ -->
+        <section class="chat-section">
+            <div class="chat-container" id="chatContainer">
+                <!-- Messages will be rendered here -->
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message ai-message">
+                        <div class="message-content">
+                            <p><em>Ask me anything about Scripture, doctrine, or sermon preparation...</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading / Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <!-- Chat Input (Fixed at bottom) -->
+            <div class="chat-input-wrapper">
+                <div class="chat-input-inner">
+                    <input 
+                        type="text" 
+                        id="chatInput" 
+                        placeholder="Ask Me Anything about the Bible..." 
+                        autocomplete="off"
+                    />
+                    <button id="sendBtn" aria-label="Send message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="chat-footer-note">
+                    <span>📖 Powered by KJV &amp; Dify AI</span>
+                    <span class="query-counter" id="queryCounter">7 queries remaining</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- DAILY BIBLE PROMISE (Sidebar style, but shown inline) -->
+        <!-- ============================================================ -->
+        <aside class="daily-promise-card">
+            <div class="promise-inner">
+                <span class="promise-icon">📖</span>
+                <h3>Daily Bible Promise</h3>
+                <blockquote class="promise-quote" id="dailyPromise">
+                    "Have not I commanded thee? Be strong and of a good courage..."
+                </blockquote>
+                <cite class="promise-ref" id="dailyPromiseRef">— Joshua 1:9 (KJV)</cite>
+            </div>
+        </aside>
+
+        <!-- ============================================================ -->
+        <!-- DAILY RHYMING QUOTE -->
+        <!-- ============================================================ -->
+        <div class="daily-rhyme">
+            <span class="rhyme-icon">✍️</span>
+            <p id="dailyRhyme">
+                The fire was not sent to make us fall apart,<br />
+                but to burn what is false and refine the heart.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- FOOTER / SUPPORT -->
+        <!-- ============================================================ -->
+        <footer class="site-footer">
+            <div class="footer-inner">
+                <div class="footer-support">
+                    <span class="support-label">Support MANUSTRY</span>
+                    <div class="support-buttons">
+                        <a href="#" class="btn-donate paypal"><i class="fab fa-paypal"></i> PayPal</a>
+                        <a href="#" class="btn-donate gcash"><i class="fas fa-mobile-alt"></i> GCash</a>
+                        <a href="#" class="btn-donate maya"><i class="fas fa-wallet"></i> Maya</a>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p class="footer-credit">
+                        A dose of God's Word a day, will keep you going all day<br />
+                        <a href="https://www.facebook.com/BeginWithGod" target="_blank" rel="noopener">
+                            — ALWAYS BEGIN WITH GOD —
+                        </a>
+                    </p>
+                    <p class="footer-copy">&copy; 2026 MANUSTRY. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- ============================================================ -->
+    <!-- JAVASCRIPT -->
+    <!-- ============================================================ -->
+    <script src="js/script.js"></script>
+</body>
+</html>
