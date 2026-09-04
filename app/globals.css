@@ -1,0 +1,309 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* MANUSTRY Theme Colors */
+:root {
+  /* Light mode (default) */
+  --background: #F5F0EB;
+  --background-secondary: #FFFFFF;
+  --text-primary: #1A1F2E;
+  --text-secondary: #4A4A4A;
+  --gold-primary: #C9A84C;
+  --gold-secondary: #B89A3A;
+  --gold-light: #E8D5A3;
+  --border-color: #C9A84C/30;
+  --card-bg: #FFFFFF;
+  --card-border: #C9A84C/30;
+  --try-asking-bg: #F5F0EB;
+  --try-asking-border: #C9A84C/30;
+  --button-bg: #FFFFFF;
+  --button-border: #C9A84C/30;
+  --button-text: #1A1F2E;
+  --button-hover-bg: #C9A84C/10;
+  --gradient-from: #F5F0EB;
+  --gradient-via: #F5F0EB;
+}
+
+/* Dark mode */
+.dark {
+  --background: #1A1F2E;
+  --background-secondary: #0F1318;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B0B0B0;
+  --gold-primary: #C9A84C;
+  --gold-secondary: #B89A3A;
+  --gold-light: #E8D5A3;
+  --border-color: #C9A84C/20;
+  --card-bg: #0F1318;
+  --card-border: #C9A84C/20;
+  --try-asking-bg: #0F1318;
+  --try-asking-border: #C9A84C/20;
+  --button-bg: #1A1F2E;
+  --button-border: #C9A84C/30;
+  --button-text: #E8D5A3;
+  --button-hover-bg: #C9A84C/5;
+  --gradient-from: #1A1F2E;
+  --gradient-via: #1A1F2E;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.font-playfair {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-cormorant {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+/* Gold accent styles */
+.gold-text {
+  color: var(--gold-primary);
+}
+
+.gold-border {
+  border-color: var(--gold-primary);
+}
+
+.gold-bg {
+  background-color: var(--gold-primary);
+}
+
+.gold-bg:hover {
+  background-color: var(--gold-secondary);
+}
+
+/* Blockquote for Scripture */
+blockquote {
+  border-left: 4px solid var(--gold-primary);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: var(--gold-light);
+}
+
+/* Selection */
+::selection {
+  background: var(--gold-primary);
+  color: var(--background);
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ============================================================
+   CUSTOM SCROLLBAR - At the very right end of screen
+   ============================================================ */
+
+/* For Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.25);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 168, 76, 0.5);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(201, 168, 76, 0.7);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 168, 76, 0.25) transparent;
+}
+
+/* ============================================================
+   WAVE ANIMATION - Smooth thinking dots
+   ============================================================ */
+@keyframes wave {
+  0%, 40%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  20% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+.animate-wave {
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+/* ============================================================
+   BLINK ANIMATION - Cursor blink
+   ============================================================ */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* ============================================================
+   PULSE DOTS - For thinking text
+   ============================================================ */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+/* ============================================================
+   BLINK ANIMATION - Cursor blink for typing
+   ============================================================ */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  min-height: 300px;
+  padding: 1rem;
+  outline: none;
+  font-family: 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: #C9A84C;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+  color: #C9A84C;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #C9A84C;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #888;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.25rem;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #888;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Wave animation for loading */
+@keyframes wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-wave {
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+/* Blink animation for cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
