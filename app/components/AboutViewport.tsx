@@ -31,7 +31,7 @@ export default function AboutViewport() {
           </p>
           <div className="flex justify-center items-center gap-3 mt-3">
             <span className="w-12 h-px bg-[#C9A84C]/30"></span>
-            <span className={`text-xs ${subTextColor}`}>Launched 2026</span>
+            <span className={`text-xs ${subTextColor}`}>Launched September 5, 2026</span>
             <span className="w-12 h-px bg-[#C9A84C]/30"></span>
           </div>
         </div>
