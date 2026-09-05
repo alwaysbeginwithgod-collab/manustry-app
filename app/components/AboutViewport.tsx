@@ -1,9 +1,12 @@
 "use client";
 
 import { useTheme } from "../context/ThemeContext";
+import { useState } from "react";
+import EmailModal from "./EmailModal";
 
 export default function AboutViewport() {
   const { darkMode } = useTheme();
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const cardBg = darkMode ? "bg-[#0F1318]" : "bg-white";
   const cardBorder = darkMode ? "border-[#C9A84C]/20" : "border-[#C9A84C]/30";
@@ -165,6 +168,16 @@ export default function AboutViewport() {
             — ALWAYS BEGIN WITH GOD —
           </a>
 
+          {/* ✅ Email Us Button */}
+          <div className="mt-4">
+            <button
+              onClick={() => setIsEmailModalOpen(true)}
+              className="text-xs text-[#C9A84C] hover:text-[#E8D5A3] transition border border-[#C9A84C]/30 px-4 py-1.5 rounded hover:bg-[#C9A84C]/10"
+            >
+              ✉️ Email Us
+            </button>
+          </div>
+
           <div className={`mt-6 pt-4 border-t border-[#C9A84C]/10 text-center`}>
             <p className={`text-[10px] leading-relaxed ${subTextColor}`}>
               *This is not a replacement for the infallible Word of God.
@@ -178,6 +191,15 @@ export default function AboutViewport() {
         </div>
 
       </div>
+
+      {/* ✅ Email Modal */}
+      <EmailModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)}
+        source="about"
+        defaultSubject="Question about MANUSTRY"
+        defaultMessage="Hello MANUSTRY team,\n\nI have a question about..."
+      />
     </div>
   );
 }

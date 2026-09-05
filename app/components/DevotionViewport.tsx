@@ -3,12 +3,14 @@
 import { useTheme } from "../context/ThemeContext";
 import { devotions, Devotion } from "../data/devotions";
 import { useState, useEffect } from "react";
+import EmailModal from "./EmailModal";
 
 export default function DevotionViewport() {
   const { darkMode } = useTheme();
   const [todayDevotion, setTodayDevotion] = useState<Devotion | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -114,13 +116,18 @@ export default function DevotionViewport() {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`,
       twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
       whatsapp: `https://api.whatsapp.com/send?text=${text}%20${url}`,
-      email: `mailto:?subject=${title}&body=${text}%0A%0ARead more: ${url}`
     };
     
     if (shareUrls[platform]) {
       window.open(shareUrls[platform], '_blank');
     }
     setShowShareMenu(false);
+  };
+
+  // ✅ Handle email share
+  const handleEmailShare = () => {
+    setShowShareMenu(false);
+    setIsEmailModalOpen(true);
   };
 
   if (!todayDevotion) {
@@ -153,7 +160,7 @@ export default function DevotionViewport() {
 
   return (
     <div className="h-full overflow-y-auto w-full max-w-3xl mx-auto px-4 py-4">
-      {/* ✅ UPDATED HEADER */}
+      {/* Header */}
       <div className="text-center mb-6">
         <h2 className="font-playfair text-3xl md:text-4xl text-[#C9A84C]">
           Daily Devotion
@@ -223,7 +230,7 @@ export default function DevotionViewport() {
           </div>
         )}
 
-        {/* ✅ UPDATED FOOTER */}
+        {/* Footer */}
         <div className="mt-6 pt-4 border-t border-[#C9A84C]/20 text-center">
           <p className={`text-sm italic ${subTextColor}`}>
             "A dose of God's Word a day, will keep you going all day."
@@ -248,7 +255,7 @@ export default function DevotionViewport() {
               </button>
               
               {showShareMenu && (
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-[#1A1F2E] border border-[#C9A84C]/30 rounded-lg shadow-xl p-2 flex gap-2 whitespace-nowrap z-10">
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-[#1A1F2E] border border-[#C9A84C]/30 rounded-lg shadow-xl p-2 flex flex-wrap gap-2 whitespace-nowrap z-10 max-w-[280px] justify-center">
                   <button
                     onClick={() => handleShare('facebook')}
                     className="text-xs bg-[#1877F2] text-white px-3 py-1 rounded hover:opacity-80 transition"
@@ -267,8 +274,9 @@ export default function DevotionViewport() {
                   >
                     💬 WhatsApp
                   </button>
+                  {/* ✅ Email Share Button - Opens Modal */}
                   <button
-                    onClick={() => handleShare('email')}
+                    onClick={handleEmailShare}
                     className="text-xs bg-[#EA4335] text-white px-3 py-1 rounded hover:opacity-80 transition"
                   >
                     ✉️ Email
@@ -290,6 +298,15 @@ export default function DevotionViewport() {
           </div>
         </div>
       </div>
+
+      {/* ✅ Email Modal */}
+      <EmailModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)}
+        source="devotion"
+        defaultSubject={`Daily Devotion: ${todayDevotion?.title || 'Devotion'}`}
+        defaultMessage={`"${todayDevotion?.tagline || 'Daily Devotion'}"\n\n${todayDevotion?.scripture ? `Scripture: ${todayDevotion.scripture}\n\n` : ''}Read the full devotion at: ${window.location.href}\n\n---\nSent from MANUSTRY - A Hand in Ministry`}
+      />
     </div>
   );
 }

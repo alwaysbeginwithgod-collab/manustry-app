@@ -3,14 +3,11 @@
 import { useTheme } from "../context/ThemeContext";
 import { anchoredSeries, ignitedSeries, standaloneBooks } from "../data/books";
 import { useState } from "react";
+import EmailModal from "./EmailModal";
 
 export default function BookshelfViewport() {
   const { darkMode } = useTheme();
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailMessage, setEmailMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [sendStatus, setSendStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const anchoredBooks = anchoredSeries;
   const ignitedBooks = ignitedSeries;
@@ -20,38 +17,6 @@ export default function BookshelfViewport() {
   const cardBorder = darkMode ? "border-[#C9A84C]/20" : "border-[#C9A84C]/30";
   const subTextColor = darkMode ? "text-gray-400" : "text-gray-600";
   const coverBg = darkMode ? "bg-[#1A1F2E]" : "bg-gray-100";
-
-  // ✅ Handle email submission
-  const handleSendEmail = async () => {
-    if (!emailSubject.trim() || !emailMessage.trim()) {
-      setSendStatus({ type: 'error', message: 'Please fill in both subject and message.' });
-      return;
-    }
-
-    setIsSending(true);
-    setSendStatus({ type: null, message: '' });
-
-    try {
-      // Option 1: Use mailto: link (simple, opens email client)
-      const mailtoLink = `mailto:always.begin.with.god@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`;
-      window.location.href = mailtoLink;
-      
-      // Option 2: Use an API endpoint (if you want to send directly from the app)
-      // You can implement this later with a service like EmailJS or Resend
-      
-      setSendStatus({ type: 'success', message: 'Email opened in your default email client!' });
-      setTimeout(() => {
-        setShowEmailModal(false);
-        setEmailSubject('');
-        setEmailMessage('');
-        setSendStatus({ type: null, message: '' });
-      }, 2000);
-    } catch (error) {
-      setSendStatus({ type: 'error', message: 'Failed to send email. Please try again.' });
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   const renderBookGrid = (bookList: any[] | undefined, seriesTitle: string) => {
     if (!bookList || bookList.length === 0) return null;
@@ -143,7 +108,7 @@ export default function BookshelfViewport() {
           <span className={subTextColor}>•</span>
           {/* ✅ Updated Email Button with Modal */}
           <button
-            onClick={() => setShowEmailModal(true)}
+            onClick={() => setIsEmailModalOpen(true)}
             className="text-[#C9A84C] hover:text-[#E8D5A3] text-sm transition"
           >
             Email Us
@@ -156,87 +121,13 @@ export default function BookshelfViewport() {
       </div>
 
       {/* ✅ Email Modal */}
-      {showEmailModal && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowEmailModal(false);
-              setSendStatus({ type: null, message: '' });
-            }
-          }}
-        >
-          <div className={`${cardBg} border ${cardBorder} rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto`}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-800"}`}>
-                📧 Send Us a Message
-              </h3>
-              <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setSendStatus({ type: null, message: '' });
-                }}
-                className="text-gray-400 hover:text-white transition text-2xl"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className={`text-sm ${subTextColor} block mb-1`}>Subject</label>
-                <input
-                  type="text"
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Enter subject..."
-                  className={`w-full ${darkMode ? "bg-[#1A1F2E] text-white" : "bg-gray-100 text-gray-800"} border ${cardBorder} rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#C9A84C] transition`}
-                />
-              </div>
-
-              <div>
-                <label className={`text-sm ${subTextColor} block mb-1`}>Message</label>
-                <textarea
-                  value={emailMessage}
-                  onChange={(e) => setEmailMessage(e.target.value)}
-                  placeholder="Write your message here..."
-                  rows={5}
-                  className={`w-full ${darkMode ? "bg-[#1A1F2E] text-white" : "bg-gray-100 text-gray-800"} border ${cardBorder} rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#C9A84C] transition resize-none`}
-                />
-              </div>
-
-              {sendStatus.message && (
-                <div className={`p-3 rounded-lg text-sm ${sendStatus.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {sendStatus.message}
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleSendEmail}
-                  disabled={isSending}
-                  className="flex-1 bg-[#C9A84C] text-[#1A1F2E] py-2.5 rounded-lg hover:bg-[#E8D5A3] transition font-medium text-sm disabled:opacity-50"
-                >
-                  {isSending ? 'Sending...' : 'Send Email'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEmailModal(false);
-                    setSendStatus({ type: null, message: '' });
-                  }}
-                  className={`px-4 py-2.5 rounded-lg border ${cardBorder} ${darkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-800"} transition text-sm`}
-                >
-                  Cancel
-                </button>
-              </div>
-
-              <p className={`text-xs ${subTextColor} text-center mt-2`}>
-                This will open your default email client.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <EmailModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)}
+        source="bookshelf"
+        defaultSubject="Question about MANUSTRY Bookshelf"
+        defaultMessage="Hello MANUSTRY team,\n\nI have a question about the books available..."
+      />
     </div>
   );
 }
