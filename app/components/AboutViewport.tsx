@@ -198,7 +198,7 @@ export default function AboutViewport() {
         onClose={() => setIsEmailModalOpen(false)}
         source="about"
         defaultSubject="Question about MANUSTRY"
-        defaultMessage="Hello MANUSTRY team,\n\nI have a question about..."
+        defaultMessage="Hello MANUSTRY team..."
       />
     </div>
   );
