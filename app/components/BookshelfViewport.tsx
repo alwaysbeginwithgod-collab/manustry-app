@@ -126,7 +126,7 @@ export default function BookshelfViewport() {
         onClose={() => setIsEmailModalOpen(false)}
         source="bookshelf"
         defaultSubject="Question about MANUSTRY Bookshelf"
-        defaultMessage="Hello MANUSTRY team,\n\nI have a question about the books available..."
+        defaultMessage="Hello MANUSTRY team..."
       />
     </div>
   );
