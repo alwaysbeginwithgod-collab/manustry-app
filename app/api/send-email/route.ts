@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ✅ Initialize Resend only if API key is available
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 export async function POST(request: Request) {
   try {
-    const { email, subject, message, userName, userEmail } = await request.json();
+    const { email, subject, message, userName, userEmail, source } = await request.json();
 
     // Validate required fields
     if (!email || !subject || !message) {
@@ -15,7 +17,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Send email
+    // ✅ Check if Resend is configured
+    if (!resend) {
+      console.warn('⚠️ Resend API key not configured. Email will not be sent.');
+      
+      // ✅ Still return success for development/testing
+      if (process.env.NODE_ENV === 'development') {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Email would be sent in production (dev mode)',
+          devMode: true
+        });
+      }
+      
+      return NextResponse.json(
+        { error: 'Email service not configured. Please try again later.' },
+        { status: 500 }
+      );
+    }
+
+    // ✅ Send email using Resend
     const { data, error } = await resend.emails.send({
       from: `MANUSTRY <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
       to: ['always.begin.with.god@gmail.com'],
@@ -33,6 +54,7 @@ export async function POST(request: Request) {
             .label { font-weight: bold; color: #C9A84C; }
             .message-box { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #C9A84C; margin: 15px 0; }
             .footer { text-align: center; padding: 20px; color: #888; font-size: 12px; }
+            .badge { display: inline-block; background: #C9A84C; color: #0F1318; padding: 2px 12px; border-radius: 12px; font-size: 10px; font-weight: bold; }
           </style>
         </head>
         <body>
@@ -41,7 +63,8 @@ export async function POST(request: Request) {
             <p style="color: #1A1F2E; margin: 0;">New Contact Form Submission</p>
           </div>
           <div class="content">
-            <p><span class="label">📧 From:</span> ${userEmail || 'Not provided'}</p>
+            <p><span class="badge">${source || 'contact'}</span></p>
+            <p><span class="label">📧 From:</span> ${userEmail || email}</p>
             <p><span class="label">👤 Name:</span> ${userName || 'Not provided'}</p>
             <p><span class="label">📝 Subject:</span> ${subject}</p>
             <div class="message-box">
