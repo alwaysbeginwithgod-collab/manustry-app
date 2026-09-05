@@ -109,7 +109,7 @@ export const ignitedSeries = [
     title: "Ignited For Mission",
     cover: "/books/ignited-6-mission.jpg",
     flipbookLink: "https://online.fliphtml5.com/xmsuz/zyxl/",
-    amazonLink: "https://www.amazon.com/dp/YOUR_AMAZON_LINK",
+    amazonLink: "https://a.co/d/09sDamBZ",
     tagline: "Go and make disciples, and never be silent again.",
     description: "Embrace your calling to share the gospel and make an eternal impact."
   }
