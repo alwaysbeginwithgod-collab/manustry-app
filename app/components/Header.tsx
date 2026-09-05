@@ -57,24 +57,6 @@ export default function Header({ activeTab, setActiveTab, toggleSidebar }: Heade
   const menuBg = darkMode ? "bg-[#1A1F2E]" : "bg-white";
   const menuBorder = darkMode ? "border-[#C9A84C]/30" : "border-[#C9A84C]/40";
 
-  // State for sidebar tooltip
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  // Listen for sidebar state changes from parent
-  useEffect(() => {
-    const saved = localStorage.getItem('manustry_sidebar_open');
-    if (saved !== null) {
-      setIsSidebarOpen(saved === 'true');
-    }
-  }, []);
-
-  const handleToggleSidebar = () => {
-    const newState = !isSidebarOpen;
-    setIsSidebarOpen(newState);
-    localStorage.setItem('manustry_sidebar_open', String(newState));
-    if (toggleSidebar) toggleSidebar();
-  };
-
   // ✅ Handle notification click - navigate to Devotion
   const handleNotificationClick = () => {
     setActiveTab("devotion");
@@ -85,24 +67,9 @@ export default function Header({ activeTab, setActiveTab, toggleSidebar }: Heade
       <header className={`fixed top-0 left-0 right-0 z-50 ${bgColor} border-b ${borderColor}`}>
         <div className="px-4">
           <div className="flex items-center justify-between h-16">
-            {/* LEFT: Logo + MANUSTRY + Sidebar Toggle */}
+            {/* LEFT: Logo + MANUSTRY */}
             <div className="flex items-center space-x-3 w-[280px] flex-shrink-0">
-              {/* Sidebar Toggle Button with Tooltip */}
-              <div className="relative group">
-                <button
-                  onClick={handleToggleSidebar}
-                  className="text-[#C9A84C] p-1 hover:bg-[#C9A84C]/10 rounded transition"
-                  aria-label="Toggle sidebar"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                {/* Tooltip */}
-                <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-[#0F1318] text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none border border-[#C9A84C]/30">
-                  {isSidebarOpen ? 'Hide Sidebar' : 'Open Sidebar'}
-                </span>
-              </div>
+              {/* ✅ REMOVED: Redundant hamburger button - now handled by LeftSidebar */}
 
               {/* Logo */}
               <img
@@ -160,7 +127,6 @@ export default function Header({ activeTab, setActiveTab, toggleSidebar }: Heade
                 )}
               </button>
 
-              {/* ✅ Pass the navigation handler to NotificationBell */}
               <NotificationBell onNotificationClick={handleNotificationClick} />
 
               {/* User Section */}

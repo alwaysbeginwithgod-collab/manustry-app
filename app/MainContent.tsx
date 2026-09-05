@@ -281,6 +281,7 @@ export default function MainContent() {
 <LeftSidebar 
   isOpen={isSidebarOpen} 
   onClose={() => setIsSidebarOpen(false)}
+  onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
   onNewChat={handleNewChat}
   conversations={conversations.map(c => ({
     id: c._id || c.conversationId,

@@ -10,6 +10,7 @@ import SupportModal from "../SupportModal";
 interface LeftSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onToggle: () => void;
   onNewChat?: () => void;
   conversations?: any[];
   onLoadConversation?: (id: string) => void;
@@ -24,6 +25,7 @@ interface LeftSidebarProps {
 export default function LeftSidebar({
   isOpen,
   onClose,
+  onToggle,
   onNewChat,
   conversations = [],
   onLoadConversation,
@@ -46,7 +48,7 @@ export default function LeftSidebar({
   const [editingTitle, setEditingTitle] = useState('');
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
-  // Close sidebar when clicking outside (works on both mobile & desktop)
+  // Close sidebar when clicking outside (mobile & desktop)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -60,17 +62,6 @@ export default function LeftSidebar({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
-
-  // Close sidebar on ESC key
-  useEffect(() => {
-    const handleEsc = (event: KeyboardEvent) => {
-      if (isOpen && event.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
   useEffect(() => {
@@ -217,7 +208,7 @@ export default function LeftSidebar({
 
   return (
     <>
-      {/* ✅ Sidebar Overlay (only visible on mobile when sidebar is open) */}
+      {/* Sidebar Overlay (only visible on mobile when sidebar is open) */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -226,11 +217,12 @@ export default function LeftSidebar({
         />
       )}
 
-      {/* ✅ Floating Hamburger Toggle Button (always visible, but with a subtle edge) */}
+      {/* ✅ Floating Hamburger Toggle Button - NOW CENTERED VERTICALLY */}
       <button
-        onClick={() => onClose()} // This toggles the sidebar by calling onClose (which is the toggle function from parent)
+        onClick={onToggle}
         className={`
-          fixed top-20 left-0 z-50 p-2 rounded-r-lg transition-all duration-300
+          fixed left-0 z-50 p-2 rounded-r-lg transition-all duration-300
+          top-1/2 -translate-y-1/2
           ${isOpen
             ? 'opacity-0 pointer-events-none -translate-x-8'
             : 'opacity-100 pointer-events-auto translate-x-0'
@@ -250,7 +242,7 @@ export default function LeftSidebar({
         <span className="sr-only">Open sidebar</span>
       </button>
 
-      {/* ✅ Sidebar Container */}
+      {/* Sidebar Container */}
       <div
         ref={sidebarRef}
         className={`
