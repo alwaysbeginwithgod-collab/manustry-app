@@ -305,7 +305,7 @@ export default function DevotionViewport() {
         onClose={() => setIsEmailModalOpen(false)}
         source="devotion"
         defaultSubject={`Daily Devotion: ${todayDevotion?.title || 'Devotion'}`}
-        defaultMessage={`"${todayDevotion?.tagline || 'Daily Devotion'}"\n\n${todayDevotion?.scripture ? `Scripture: ${todayDevotion.scripture}\n\n` : ''}Read the full devotion at: ${window.location.href}\n\n---\nSent from MANUSTRY - A Hand in Ministry`}
+        defaultMessage="Write your message here..."
       />
     </div>
   );

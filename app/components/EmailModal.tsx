@@ -37,65 +37,69 @@ export default function EmailModal({
   const subTextColor = darkMode ? "text-gray-400" : "text-gray-600";
   const inputBg = darkMode ? "bg-[#1A1F2E]" : "bg-gray-100";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!email.trim() || !subject.trim() || !message.trim()) {
+    setStatus({
+      type: 'error',
+      message: 'Please fill in all fields'
+    });
+    return;
+  }
+
+  setIsSending(true);
+  setStatus({ type: null, message: '' });
+
+  try {
+    console.log('📧 Sending email...');
     
-    if (!email.trim() || !subject.trim() || !message.trim()) {
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        subject,
+        message,
+        userName: user?.fullName || user?.username || 'Anonymous',
+        userEmail: user?.emailAddresses?.[0]?.emailAddress || '',
+        source: source || 'contact',
+      }),
+    });
+
+    const data = await response.json();
+    console.log('📧 Response:', data);
+
+    if (response.ok) {
+      setStatus({
+        type: 'success',
+        message: '✅ Your message was sent successfully! We\'ll get back to you soon.'
+      });
+      setEmail('');
+      setSubject('');
+      setMessage('');
+      setTimeout(() => {
+        onClose();
+        setStatus({ type: null, message: '' });
+      }, 3000);
+    } else {
       setStatus({
         type: 'error',
-        message: 'Please fill in all fields'
+        message: data.error || 'Failed to send message. Please try again.'
       });
-      return;
     }
-
-    setIsSending(true);
-    setStatus({ type: null, message: '' });
-
-    try {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          subject,
-          message,
-          userName: user?.fullName || user?.username || 'Anonymous',
-          userEmail: user?.emailAddresses?.[0]?.emailAddress || '',
-          source,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStatus({
-          type: 'success',
-          message: '✅ Your message was sent successfully! We\'ll get back to you soon.'
-        });
-        setEmail('');
-        setSubject('');
-        setMessage('');
-        setTimeout(() => {
-          onClose();
-          setStatus({ type: null, message: '' });
-        }, 3000);
-      } else {
-        setStatus({
-          type: 'error',
-          message: data.error || 'Failed to send message. Please try again.'
-        });
-      }
-    } catch (error) {
-      setStatus({
-        type: 'error',
-        message: 'Network error. Please check your connection and try again.'
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
+  } catch (error) {
+    console.error('❌ Network error:', error);
+    setStatus({
+      type: 'error',
+      message: 'Network error. Please check your connection and try again.'
+    });
+  } finally {
+    setIsSending(false);
+  }
+};
 
   if (!isOpen) return null;
 

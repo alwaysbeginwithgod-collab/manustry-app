@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-// ✅ Initialize Resend only if API key is available
+// ✅ Initialize Resend with your API key
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
@@ -9,27 +9,20 @@ export async function POST(request: Request) {
   try {
     const { email, subject, message, userName, userEmail, source } = await request.json();
 
+    console.log('📧 Email request received:', { email, subject, source });
+
     // Validate required fields
     if (!email || !subject || !message) {
+      console.log('❌ Missing fields:', { email: !!email, subject: !!subject, message: !!message });
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Please fill in all fields' },
         { status: 400 }
       );
     }
 
     // ✅ Check if Resend is configured
     if (!resend) {
-      console.warn('⚠️ Resend API key not configured. Email will not be sent.');
-      
-      // ✅ Still return success for development/testing
-      if (process.env.NODE_ENV === 'development') {
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Email would be sent in production (dev mode)',
-          devMode: true
-        });
-      }
-      
+      console.error('❌ Resend API key not configured');
       return NextResponse.json(
         { error: 'Email service not configured. Please try again later.' },
         { status: 500 }
@@ -37,6 +30,8 @@ export async function POST(request: Request) {
     }
 
     // ✅ Send email using Resend
+    console.log('📧 Sending email via Resend...');
+    
     const { data, error } = await resend.emails.send({
       from: `MANUSTRY <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
       to: ['always.begin.with.god@gmail.com'],
@@ -68,7 +63,7 @@ export async function POST(request: Request) {
             <p><span class="label">👤 Name:</span> ${userName || 'Not provided'}</p>
             <p><span class="label">📝 Subject:</span> ${subject}</p>
             <div class="message-box">
-              <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+              <p style="margin: 0; white-space: pre-wrap;">${message.replace(/\n/g, '<br>')}</p>
             </div>
             <p style="color: #888; font-size: 14px;">
               Reply to: <a href="mailto:${userEmail || email}" style="color: #C9A84C;">${userEmail || email}</a>
@@ -84,13 +79,14 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error('Email error:', error);
+      console.error('❌ Resend error:', error);
       return NextResponse.json(
-        { error: 'Failed to send email' },
+        { error: error.message || 'Failed to send email' },
         { status: 500 }
       );
     }
 
+    console.log('✅ Email sent successfully:', data?.id);
     return NextResponse.json({ 
       success: true, 
       message: 'Email sent successfully!',
@@ -98,9 +94,9 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Server error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error. Please try again.' },
       { status: 500 }
     );
   }
