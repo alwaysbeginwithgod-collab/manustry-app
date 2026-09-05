@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "../../context/ThemeContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { biblePromises } from "../../data/biblePromises";
 import { getDailyEncouragement } from "../../data/dailyEncouragements";
@@ -16,14 +16,13 @@ interface LeftSidebarProps {
   onRenameConversation?: (id: string, newTitle: string) => void;
   onDeleteConversation?: (id: string) => void;
   onPinConversation?: (id: string, pinned: boolean) => void;
-  // ✅ NEW PROPS
   activeTab?: string;
   conversationsData?: any[];
   onLoadInWriter?: (chatId: string, messages: any[], title: string) => void;
 }
 
-export default function LeftSidebar({ 
-  isOpen, 
+export default function LeftSidebar({
+  isOpen,
   onClose,
   onNewChat,
   conversations = [],
@@ -31,13 +30,14 @@ export default function LeftSidebar({
   onRenameConversation,
   onDeleteConversation,
   onPinConversation,
-  // ✅ NEW PROPS
   activeTab = 'home',
   conversationsData = [],
   onLoadInWriter,
 }: LeftSidebarProps) {
   const { darkMode } = useTheme();
   const { user } = useUser();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
   const [dailyVerse, setDailyVerse] = useState(biblePromises[0]);
   const [dailyEncouragement, setDailyEncouragement] = useState<{ id: number; title: string; quote: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,6 +45,33 @@ export default function LeftSidebar({
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+
+  // Close sidebar when clicking outside (works on both mobile & desktop)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isOpen &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
+
+  // Close sidebar on ESC key
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (isOpen && event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     console.log('📊 LeftSidebar: Received conversations:', conversations.length);
@@ -112,40 +139,33 @@ export default function LeftSidebar({
     setEditingTitle('');
   };
 
-  // ✅ UPDATED: Handle conversation click with viewport awareness
   const handleConversationClick = (chatId: string) => {
     console.log('🖱️ Sidebar: Clicked conversation:', chatId);
     console.log('📂 Current active tab:', activeTab);
-    
-    // Find the full conversation data from conversationsData
+
     const fullConv = conversationsData.find(c => c._id === chatId || c.id === chatId);
     console.log('📂 Full conversation found:', !!fullConv);
     console.log('📂 Messages count:', fullConv?.messages?.length || 0);
-    
-    // ✅ If we're in Writer viewport, ALWAYS load in Writer
+
     if (activeTab === 'writer') {
       console.log('📂 Loading in Writer (active tab is writer)');
       if (fullConv && onLoadInWriter) {
         onLoadInWriter(chatId, fullConv.messages || [], fullConv.title || 'Conversation');
       } else if (onLoadInWriter) {
-        // If no full data, try to load with empty messages
         onLoadInWriter(chatId, [], 'Conversation');
       } else {
-        // Fallback: load in Home
         console.log('⚠️ onLoadInWriter not available, loading in Home');
         onLoadConversation?.(chatId);
       }
       return;
     }
-    
-    // ✅ If we're in Home viewport, load in Home
+
     if (activeTab === 'home') {
       console.log('📂 Loading in Home (active tab is home)');
       onLoadConversation?.(chatId);
       return;
     }
-    
-    // ✅ If we're in any other viewport (Devotion, Bookshelf, etc.), switch to Home
+
     console.log('📂 Switching to Home and loading conversation');
     onLoadConversation?.(chatId);
   };
@@ -175,36 +195,72 @@ export default function LeftSidebar({
     setEditingTitle(title);
   };
 
-  // Professional button styles - transparent with hover effects
   const iconButtonClass = `p-1.5 rounded-md transition-all duration-200 
     hover:scale-110 hover:shadow-sm 
-    ${darkMode 
-      ? 'text-gray-400 hover:text-[#E8D5A3] hover:bg-[#C9A84C]/10' 
+    ${darkMode
+      ? 'text-gray-400 hover:text-[#E8D5A3] hover:bg-[#C9A84C]/10'
       : 'text-gray-400 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10'}`;
 
-  const pinButtonClass = (isPinned: boolean) => 
+  const pinButtonClass = (isPinned: boolean) =>
     `p-1.5 rounded-md transition-all duration-200 hover:scale-110 hover:shadow-sm
-    ${isPinned 
-      ? 'text-red-500 hover:text-red-600 hover:bg-red-500/10' 
-      : darkMode 
-        ? 'text-gray-400 hover:text-[#E8D5A3] hover:bg-[#C9A84C]/10' 
+    ${isPinned
+      ? 'text-red-500 hover:text-red-600 hover:bg-red-500/10'
+      : darkMode
+        ? 'text-gray-400 hover:text-[#E8D5A3] hover:bg-[#C9A84C]/10'
         : 'text-gray-400 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10'}`;
 
   const deleteButtonClass = `p-1.5 rounded-md transition-all duration-200 
     hover:scale-110 hover:shadow-sm
-    ${darkMode 
-      ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10' 
+    ${darkMode
+      ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
       : 'text-gray-400 hover:text-red-500 hover:bg-red-500/10'}`;
 
   return (
     <>
+      {/* ✅ Sidebar Overlay (only visible on mobile when sidebar is open) */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ✅ Floating Hamburger Toggle Button (always visible, but with a subtle edge) */}
+      <button
+        onClick={() => onClose()} // This toggles the sidebar by calling onClose (which is the toggle function from parent)
+        className={`
+          fixed top-20 left-0 z-50 p-2 rounded-r-lg transition-all duration-300
+          ${isOpen
+            ? 'opacity-0 pointer-events-none -translate-x-8'
+            : 'opacity-100 pointer-events-auto translate-x-0'
+          }
+          ${darkMode
+            ? 'bg-[#1A1F2E] text-[#E8D5A3] border-r border-[#C9A84C]/30 hover:bg-[#C9A84C]/10'
+            : 'bg-white text-[#C9A84C] border-r border-[#C9A84C]/30 hover:bg-gray-100'
+          }
+          border-y border-[#C9A84C]/20 shadow-lg
+          hover:shadow-xl
+        `}
+        aria-label="Toggle sidebar"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <span className="sr-only">Open sidebar</span>
+      </button>
+
+      {/* ✅ Sidebar Container */}
       <div
+        ref={sidebarRef}
         className={`
           fixed top-16 left-0 bottom-0 w-[280px] 
           ${bgColor} border-r ${borderColor} 
           z-40 
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          shadow-2xl
+          lg:shadow-none
         `}
       >
         <div className="p-4 space-y-4 flex flex-col h-full">
@@ -252,7 +308,7 @@ export default function LeftSidebar({
                 <p className={`text-xs font-medium ${subTextColor} uppercase tracking-wider mt-2`}>
                   Recent Chats
                 </p>
-                
+
                 {pinnedChats.map((chat: any) => {
                   const chatId = getConvId(chat);
                   const title = getConvTitle(chat);
@@ -262,7 +318,7 @@ export default function LeftSidebar({
                       className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition group
                         ${darkMode ? 'hover:bg-[#1A1F2E]' : 'hover:bg-white'}`}
                     >
-                      <div 
+                      <div
                         className="flex items-center gap-2 flex-1 min-w-0"
                         onClick={() => handleConversationClick(chatId)}
                       >
@@ -291,7 +347,7 @@ export default function LeftSidebar({
                         )}
                       </div>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                        <button 
+                        <button
                           onClick={(e) => handlePinToggle(chatId, e)}
                           className={pinButtonClass(true)}
                           title="Unpin"
@@ -300,7 +356,7 @@ export default function LeftSidebar({
                             <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                           </svg>
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => handleEditStart(chatId, title, e)}
                           className={iconButtonClass}
                           title="Rename"
@@ -309,7 +365,7 @@ export default function LeftSidebar({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => handleDelete(chatId, e)}
                           className={deleteButtonClass}
                           title="Delete"
@@ -332,7 +388,7 @@ export default function LeftSidebar({
                       className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition group
                         ${darkMode ? 'hover:bg-[#1A1F2E]' : 'hover:bg-white'}`}
                     >
-                      <div 
+                      <div
                         className="flex items-center gap-2 flex-1 min-w-0"
                         onClick={() => handleConversationClick(chatId)}
                       >
@@ -361,7 +417,7 @@ export default function LeftSidebar({
                         )}
                       </div>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                        <button 
+                        <button
                           onClick={(e) => handlePinToggle(chatId, e)}
                           className={pinButtonClass(false)}
                           title="Pin"
@@ -370,7 +426,7 @@ export default function LeftSidebar({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                           </svg>
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => handleEditStart(chatId, title, e)}
                           className={iconButtonClass}
                           title="Rename"
@@ -379,7 +435,7 @@ export default function LeftSidebar({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => handleDelete(chatId, e)}
                           className={deleteButtonClass}
                           title="Delete"
@@ -424,9 +480,9 @@ export default function LeftSidebar({
         </div>
       </div>
 
-      <SupportModal 
-        isOpen={isSupportModalOpen} 
-        onClose={() => setIsSupportModalOpen(false)} 
+      <SupportModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
       />
     </>
   );
