@@ -3,19 +3,42 @@ import { v } from "convex/values";
 
 export default defineSchema({
   // Users Table
-  users: defineTable({
-    clerkId: v.string(),
+users: defineTable({
+  clerkId: v.string(),
+  email: v.string(),
+  fullName: v.string(),
+  isPremium: v.boolean(),
+  premiumType: v.optional(v.union(v.literal("monthly"), v.literal("lifetime"))),
+  dailyQueryCount: v.number(),
+  lastQueryDate: v.string(),
+  createdAt: v.string(),
+})
+.index("by_clerkId", ["clerkId"])
+.index("by_email", ["email"]),
+
+  // Premium Users Table
+  premiumUsers: defineTable({
+    userId: v.string(),
     email: v.string(),
-    fullName: v.string(),
-    role: v.union(v.literal("guest"), v.literal("registered"), v.literal("admin")),
-    isPremium: v.boolean(),
-    premiumType: v.optional(v.union(v.literal("monthly"), v.literal("lifetime"))),
-    dailyQueryCount: v.number(),
-    lastQueryDate: v.string(),
-    createdAt: v.string(),
+    plan: v.union(v.literal("monthly"), v.literal("lifetime")),
+    startDate: v.number(),
+    endDate: v.union(v.number(), v.null()),
+    paymentId: v.string(),
+    paymentMethod: v.union(v.literal("paypal"), v.literal("gcash"), v.literal("maya")),
+    amount: v.number(),
+    currency: v.string(),
+    status: v.union(v.literal("active"), v.literal("expired"), v.literal("cancelled")),
   })
-  .index("by_clerkId", ["clerkId"])
-  .index("by_email", ["email"]),
+  .index("by_userId", ["userId"])
+  .index("by_status", ["status"]),
+
+  // Query Limits Table
+  queryLimits: defineTable({
+    userId: v.string(),
+    date: v.string(),
+    count: v.number(),
+  })
+  .index("by_userId_date", ["userId", "date"]),
 
   // Chat History Table
   chatHistory: defineTable({
@@ -123,7 +146,7 @@ export default defineSchema({
   })
   .index("by_book_chapter_verse", ["book", "chapter", "verse"]),
 
-  // ✅ Writer Content Table - NOW INSIDE the schema!
+  // Writer Content Table
   writerContent: defineTable({
     userId: v.string(),
     title: v.string(),

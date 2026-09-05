@@ -1,120 +1,119 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-// Get user by Clerk ID
-export const getUserByClerkId = query({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-  },
-});
-
-// Create or update user
-export const upsertUser = mutation({
+// Get or create user
+export const getOrCreateUser = mutation({
   args: {
     clerkId: v.string(),
     email: v.string(),
     fullName: v.string(),
-    role: v.optional(v.union(v.literal("guest"), v.literal("registered"), v.literal("admin"))),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
+    const { clerkId, email, fullName } = args;
+
+    // Check if user exists
+    const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
       .first();
 
-    const now = new Date().toISOString();
-    const role = args.role || "registered";
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        email: args.email,
-        fullName: args.fullName,
-        role: role,
+    if (existingUser) {
+      // Update existing user
+      await ctx.db.patch(existingUser._id, {
+        email: email,
+        fullName: fullName,
+        lastQueryDate: new Date().toISOString().split('T')[0],
       });
-      return existing._id;
-    } else {
-      return await ctx.db.insert("users", {
-        clerkId: args.clerkId,
-        email: args.email,
-        fullName: args.fullName,
-        role: role,
-        isPremium: false,
-        dailyQueryCount: 0,
-        lastQueryDate: now,
-        createdAt: now,
-      });
+      return existingUser;
     }
+
+    // Create new user
+    const now = new Date().toISOString();
+    const today = now.split('T')[0];
+    
+    const userId = await ctx.db.insert("users", {
+      clerkId: clerkId,
+      email: email,
+      fullName: fullName,
+      isPremium: false,
+      premiumType: undefined,
+      dailyQueryCount: 0,
+      lastQueryDate: today,
+      createdAt: now,
+    });
+
+    const newUser = await ctx.db.get(userId);
+    return newUser;
   },
 });
 
-// Check and increment query count
-export const checkAndIncrementQueries = mutation({
-  args: { clerkId: v.string() },
+// Get user by clerkId
+export const getUser = query({
+  args: {
+    clerkId: v.string(),
+  },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
-
-    if (!user) throw new Error("User not found");
-
-    const today = new Date().toISOString().split("T")[0];
-    const lastQueryDate = user.lastQueryDate?.split("T")[0] || "";
-
-    let dailyQueryCount = user.dailyQueryCount || 0;
-    if (lastQueryDate !== today) {
-      dailyQueryCount = 0;
-    }
-
-    const isPremium = user.isPremium || false;
-    const canQuery = isPremium || dailyQueryCount < 7;
-
-    if (!canQuery) {
-      return { canQuery: false, remaining: 0, isPremium: false };
-    }
-
-    await ctx.db.patch(user._id, {
-      dailyQueryCount: dailyQueryCount + 1,
-      lastQueryDate: new Date().toISOString(),
-    });
-
-    return {
-      canQuery: true,
-      remaining: 6 - dailyQueryCount,
-      isPremium: isPremium,
-    };
+    return user;
   },
 });
 
-// Update premium status
-export const setPremium = mutation({
+// Update user premium status
+export const updatePremiumStatus = mutation({
   args: {
     clerkId: v.string(),
     isPremium: v.boolean(),
     premiumType: v.optional(v.union(v.literal("monthly"), v.literal("lifetime"))),
   },
   handler: async (ctx, args) => {
+    const { clerkId, isPremium, premiumType } = args;
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
       .first();
 
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      throw new Error("User not found");
+    }
 
     await ctx.db.patch(user._id, {
-      isPremium: args.isPremium,
-      premiumType: args.premiumType,
+      isPremium: isPremium,
+      premiumType: premiumType || undefined,
     });
+
+    return { success: true };
   },
 });
 
-// Get all users (admin)
-export const getAllUsers = query({
-  handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+// Update daily query count
+export const updateDailyQueryCount = mutation({
+  args: {
+    clerkId: v.string(),
+    count: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { clerkId, count } = args;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    await ctx.db.patch(user._id, {
+      dailyQueryCount: count,
+      lastQueryDate: today,
+    });
+
+    return { success: true };
   },
 });

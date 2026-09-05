@@ -15,6 +15,7 @@ import type * as devotions from "../devotions.js";
 import type * as dictionary from "../dictionary.js";
 import type * as kjv from "../kjv.js";
 import type * as payments from "../payments.js";
+import type * as queryLimits from "../queryLimits.js";
 import type * as querySuggestions from "../querySuggestions.js";
 import type * as users from "../users.js";
 import type * as writer from "../writer.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   dictionary: typeof dictionary;
   kjv: typeof kjv;
   payments: typeof payments;
+  queryLimits: typeof queryLimits;
   querySuggestions: typeof querySuggestions;
   users: typeof users;
   writer: typeof writer;

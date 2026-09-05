@@ -80,6 +80,32 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
     );
   };
 
+useEffect(() => {
+  const checkForUpdates = async () => {
+    try {
+      const res = await fetch('/api/version');
+      const data = await res.json();
+      if (data.updateAvailable) {
+        setNotifications(prev => [{
+          id: 'update',
+          title: '🔄 New Update Available',
+          message: `Version ${data.version} is ready!`,
+          type: 'update',
+          read: false,
+          timestamp: new Date(),
+          link: '/update'
+        }, ...prev]);
+      }
+    } catch (e) {
+      console.log('Update check failed');
+    }
+  };
+  
+  checkForUpdates();
+  const interval = setInterval(checkForUpdates, 24 * 60 * 60 * 1000);
+  return () => clearInterval(interval);
+}, []);
+
   // ✅ Handle notification click - navigate to Devotion if it's a devotion notification
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
