@@ -262,6 +262,8 @@ export default function ToolsViewport() {
       setBibleResult(`Unable to fetch scripture. Please try again.`);
     }
     setIsLoading(false);
+    // ✅ Clear the input after search
+    setBibleQuery("");
   };
 
 // ============================================================
@@ -411,6 +413,8 @@ const searchWord = async () => {
     setWordStats(null);
   }
   setIsSearching(false);
+  // ✅ Clear the input after search
+  setWordQuery("");
 };
 
   // Group verses by book for rendering
@@ -468,7 +472,7 @@ const searchWord = async () => {
   };
 
   // ============================================================
-  // TOOL 3: SIMPLE DICTIONARY (Links to External Sources)
+  // TOOL 3: DICTIONARY
   // ============================================================
 const searchDictionary = async () => {
   if (!searchInput.trim()) return;
