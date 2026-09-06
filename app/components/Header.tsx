@@ -130,33 +130,44 @@ export default function Header({ activeTab, setActiveTab, toggleSidebar }: Heade
               <NotificationBell onNotificationClick={handleNotificationClick} />
 
               {/* User Section */}
-              {user ? (
-                <div className="relative" ref={menuRef}>
-                  <button
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className={`flex items-center space-x-2 text-sm ${textColor} ${hoverColor} px-2 py-1 rounded-lg hover:bg-[#C9A84C]/10 transition`}
-                  >
-                    <span className="hidden sm:inline max-w-[80px] truncate">
-                      {user.fullName || user.emailAddresses[0]?.emailAddress}
-                    </span>
-                    <div className="w-8 h-8 rounded-full bg-[#C9A84C] flex items-center justify-center text-[#0F1318] font-bold">
-                      {user.fullName?.[0] || "U"}
-                    </div>
-                  </button>
-                  
-                  <UserMenuDropdown 
-                    isOpen={isMenuOpen} 
-                    onClose={() => setIsMenuOpen(false)}
-                  />
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsSignInOpen(true)}
-                  className="text-sm bg-[#C9A84C] text-[#1A1F2E] px-5 py-2 rounded-lg hover:bg-[#E8D5A3] transition font-medium"
-                >
-                  Sign In
-                </button>
-              )}
+{user ? (
+  <div className="relative" ref={menuRef}>
+    <button
+      onClick={() => setIsMenuOpen(!isMenuOpen)}
+      className={`flex items-center space-x-2 text-sm ${textColor} ${hoverColor} px-2 py-1 rounded-lg hover:bg-[#C9A84C]/10 transition`}
+    >
+      {/* ✅ Show first name only */}
+      <span className="hidden sm:inline max-w-[80px] truncate">
+        {user.firstName || user.fullName?.split(' ')[0] || user.emailAddresses[0]?.emailAddress?.split('@')[0]}
+      </span>
+      
+      {/* ✅ Show profile picture from Google/Facebook */}
+      {user.imageUrl ? (
+        <img
+          src={user.imageUrl}
+          alt={user.fullName || "User"}
+          className="w-8 h-8 rounded-full object-cover border-2 border-[#C9A84C]/30"
+        />
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-[#C9A84C] flex items-center justify-center text-[#0F1318] font-bold text-sm">
+          {(user.firstName || user.fullName?.[0] || "U").charAt(0).toUpperCase()}
+        </div>
+      )}
+    </button>
+    
+    <UserMenuDropdown 
+      isOpen={isMenuOpen} 
+      onClose={() => setIsMenuOpen(false)}
+    />
+  </div>
+) : (
+  <button
+    onClick={() => setIsSignInOpen(true)}
+    className="text-sm bg-[#C9A84C] text-[#1A1F2E] px-5 py-2 rounded-lg hover:bg-[#E8D5A3] transition font-medium"
+  >
+    Sign In
+  </button>
+)}
             </div>
           </div>
         </div>
@@ -195,25 +206,25 @@ export default function Header({ activeTab, setActiveTab, toggleSidebar }: Heade
               ×
             </button>
             <div className="bg-transparent">
-              <SignIn 
-                routing="hash"
-                redirectUrl="/"
-                appearance={{
-                  elements: {
-                    rootBox: "w-full",
-                    card: "bg-[#0F1318] border border-[#C9A84C]/30 rounded-xl shadow-2xl p-6",
-                    headerTitle: "text-[#C9A84C] font-playfair text-2xl",
-                    headerSubtitle: "text-[#E8D5A3] text-sm",
-                    formFieldLabel: "text-white text-sm",
-                    formFieldInput: "bg-[#1A1F2E] border-[#C9A84C]/30 text-white rounded-lg focus:border-[#C9A84C] focus:ring-[#C9A84C]",
-                    formButtonPrimary: "bg-[#C9A84C] text-[#1A1F2E] hover:bg-[#E8D5A3] transition font-medium rounded-lg py-2",
-                    footerActionLink: "text-[#C9A84C] hover:text-[#E8D5A3] transition",
-                    socialButtonsBlockButton: "border-[#C9A84C]/30 text-white hover:bg-[#C9A84C]/10 rounded-lg",
-                    dividerLine: "bg-[#C9A84C]/30",
-                    dividerText: "text-gray-500 text-xs",
-                  }
-                }}
-              />
+<SignIn 
+  routing="hash"
+  redirectUrl="/"
+  appearance={{
+    elements: {
+      rootBox: "w-full",
+      card: "bg-[#0F1318] border border-[#C9A84C]/30 rounded-xl shadow-2xl p-6",
+      headerTitle: "text-[#C9A84C] font-playfair text-2xl",
+      headerSubtitle: "text-[#E8D5A3] text-sm",
+      formFieldLabel: "text-white text-sm",
+      formFieldInput: "bg-[#1A1F2E] border-[#C9A84C]/30 text-white rounded-lg focus:border-[#C9A84C] focus:ring-[#C9A84C]",
+      formButtonPrimary: "bg-[#C9A84C] text-[#1A1F2E] hover:bg-[#E8D5A3] transition font-medium rounded-lg py-2",
+      footerActionLink: "text-[#C9A84C] hover:text-[#E8D5A3] transition",
+      socialButtonsBlockButton: "border-[#C9A84C]/30 text-white hover:bg-[#C9A84C]/10 rounded-lg",
+      dividerLine: "bg-[#C9A84C]/30",
+      dividerText: "text-gray-500 text-xs",
+    }
+  }}
+/>
             </div>
           </div>
         </div>

@@ -166,11 +166,11 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
   // Get icon for notification type
   const getTypeIcon = (type: string) => {
     switch(type) {
-      case 'devotion': return '🙏';
-      case 'promise': return '📖';
-      case 'update': return '✨';
-      case 'feedback': return '💬';
-      default: return '📌';
+      case 'devotion': return '';
+      case 'promise': return '';
+      case 'update': return '';
+      case 'feedback': return '';
+      default: return '';
     }
   };
 
