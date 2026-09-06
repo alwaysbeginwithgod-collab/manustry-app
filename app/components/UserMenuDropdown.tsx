@@ -186,25 +186,25 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
               <div className={`p-3 rounded-lg ${darkMode ? "bg-[#0F1318]" : "bg-gray-50"} border-l-4 border-[#C9A84C]`}>
                 <h4 className="font-semibold text-[#C9A84C]">📖 Home</h4>
                 <p className={`text-xs ${subTextColor}`}>
-                  Ask any Bible question and get AI-powered responses with Scripture references, devotions, and sermon outlines.
+                  Ask any Bible question and get an instant responses rooted in KJV Scripture references, devotions, and sermon outlines.
                 </p>
               </div>
               <div className={`p-3 rounded-lg ${darkMode ? "bg-[#0F1318]" : "bg-gray-50"} border-l-4 border-[#C9A84C]`}>
                 <h4 className="font-semibold text-[#C9A84C]">🙏 Devotion</h4>
                 <p className={`text-xs ${subTextColor}`}>
-                  Daily devotionals that rotate automatically. Each includes Scripture, reflection, prayer, and a rhyming quote.
+                  Daily devotionals to begin a day with God. Each includes Scripture, reflection, prayer, and unique memorable quotes.
                 </p>
               </div>
               <div className={`p-3 rounded-lg ${darkMode ? "bg-[#0F1318]" : "bg-gray-50"} border-l-4 border-[#C9A84C]`}>
                 <h4 className="font-semibold text-[#C9A84C]">✍️ Writer</h4>
                 <p className={`text-xs ${subTextColor}`}>
-                  Dual-panel workspace for writing devotions and sermons. Rich text formatting, font selection, and AI assistance in the right panel.
+                  Dual-panel workspace for writing devotions and sermons. Rich text formatting, font selection, and MANUSTRY assistance in the right panel.
                 </p>
               </div>
               <div className={`p-3 rounded-lg ${darkMode ? "bg-[#0F1318]" : "bg-gray-50"} border-l-4 border-[#C9A84C]`}>
                 <h4 className="font-semibold text-[#C9A84C]">📚 Bookshelf</h4>
                 <p className={`text-xs ${subTextColor}`}>
-                  Browse and purchase books from the Anchored Series, Ignited Series, and standalone resources.
+                  Browse, preview, and purchase books from Devotional series, Discipleship, standalone resources, and more.
                 </p>
               </div>
               <div className={`p-3 rounded-lg ${darkMode ? "bg-[#0F1318]" : "bg-gray-50"} border-l-4 border-[#C9A84C]`}>
