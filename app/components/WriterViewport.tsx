@@ -430,29 +430,36 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-// ✅ EXPORT: Save as DOCX with native "Save As" dialog
+// ✅ SAVE: Download as DOCX with detailed error logging
 const handleSave = async () => {
   if (!editor) {
     alert('Please write some content first.');
     return;
   }
 
+  console.log('📝 Starting save process...');
   setIsSaving(true);
+  
   try {
     const content = editor?.getHTML() || '';
+    console.log('📝 Content length:', content.length);
     
     // Check if content is empty
     const plainText = editor?.getText() || '';
+    console.log('📝 Plain text length:', plainText.length);
+    
     if (!plainText.trim()) {
-      alert('Please write some content before exporting.');
+      alert('Please write some content before saving.');
       setIsSaving(false);
       return;
     }
     
     // Get title and category for file name
     const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
+    console.log('📝 File name:', fileName);
     
-    // Create DOCX document
+    console.log('📝 Creating DOCX document...');
+    // Create DOCX document - SIMPLIFIED VERSION
     const doc = new DocxDocument({
       sections: [{
         properties: {
@@ -466,6 +473,7 @@ const handleSave = async () => {
           },
         },
         children: [
+          // Title
           new Paragraph({
             children: [
               new TextRun({
@@ -478,6 +486,7 @@ const handleSave = async () => {
             alignment: AlignmentType.CENTER,
             spacing: { after: 300 },
           }),
+          // Category
           new Paragraph({
             children: [
               new TextRun({
@@ -490,6 +499,7 @@ const handleSave = async () => {
             alignment: AlignmentType.CENTER,
             spacing: { after: 400 },
           }),
+          // Separator
           new Paragraph({
             children: [
               new TextRun({
@@ -506,140 +516,57 @@ const handleSave = async () => {
       }],
     });
 
-    // Parse HTML content
+    console.log('📝 Parsing HTML content...');
+    // Parse HTML content - SIMPLIFIED VERSION
     const parser = new DOMParser();
     const htmlDoc = parser.parseFromString(content, 'text/html');
     const body = htmlDoc.body;
 
-    const processNode = (node: any, parentParagraphs: any[]) => {
-      if (node.nodeType === 3) {
-        const text = node.textContent || '';
-        if (text.trim()) {
-          const textRun = new TextRun({
-            text: text,
-            size: 22,
-            font: 'Times New Roman',
-          });
-          if (node.parentElement) {
-            const parent = node.parentElement;
-            if (parent.tagName === 'STRONG' || parent.tagName === 'B') textRun.bold = true;
-            if (parent.tagName === 'EM' || parent.tagName === 'I') textRun.italics = true;
-            if (parent.tagName === 'U') textRun.underline = {};
-          }
-          parentParagraphs.push(new Paragraph({
-            children: [textRun],
-            alignment: AlignmentType.LEFT,
-            spacing: { after: 150 },
-          }));
-        }
-        return;
-      }
-
-      if (node.nodeType === 1) {
-        const tag = node.tagName.toLowerCase();
-        if (tag === 'p') {
-          const paraChildren: any[] = [];
-          for (const child of node.childNodes) {
-            if (child.nodeType === 3) {
-              const text = child.textContent || '';
-              if (text.trim()) {
-                paraChildren.push(new TextRun({
-                  text: text,
-                  size: 22,
-                  font: 'Times New Roman',
-                }));
-              }
-            } else if (child.nodeType === 1) {
-              const childTag = child.tagName.toLowerCase();
-              if (childTag === 'strong' || childTag === 'b') {
-                paraChildren.push(new TextRun({
-                  text: child.textContent || '',
-                  size: 22,
-                  bold: true,
-                  font: 'Times New Roman',
-                }));
-              } else if (childTag === 'em' || childTag === 'i') {
-                paraChildren.push(new TextRun({
-                  text: child.textContent || '',
-                  size: 22,
-                  italics: true,
-                  font: 'Times New Roman',
-                }));
-              } else if (childTag === 'u') {
-                paraChildren.push(new TextRun({
-                  text: child.textContent || '',
-                  size: 22,
-                  underline: {},
-                  font: 'Times New Roman',
-                }));
-              } else {
-                paraChildren.push(new TextRun({
-                  text: child.textContent || '',
-                  size: 22,
-                  font: 'Times New Roman',
-                }));
-              }
-            }
-          }
-          if (paraChildren.length > 0) {
-            parentParagraphs.push(new Paragraph({
-              children: paraChildren,
-              alignment: AlignmentType.LEFT,
-              spacing: { after: 150 },
-            }));
-          }
-        } else if (tag === 'blockquote') {
-          parentParagraphs.push(new Paragraph({
-            children: [
-              new TextRun({
-                text: node.textContent || '',
-                size: 22,
-                italics: true,
-                color: '888888',
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.LEFT,
-            spacing: { after: 150 },
-          }));
-        } else if (tag === 'div' || tag === 'span') {
-          for (const child of node.childNodes) {
-            processNode(child, parentParagraphs);
-          }
-        } else if (tag === 'ul' || tag === 'ol') {
-          const items = node.querySelectorAll('li');
-          items.forEach((li: any) => {
-            const bullet = tag === 'ul' ? '• ' : `${Array.from(items).indexOf(li) + 1}. `;
-            parentParagraphs.push(new Paragraph({
-              children: [
-                new TextRun({
-                  text: bullet + (li.textContent || ''),
-                  size: 22,
-                  font: 'Times New Roman',
-                }),
-              ],
-              alignment: AlignmentType.LEFT,
-              spacing: { after: 100 },
-            }));
-          });
-        }
-      }
-    };
-
+    // Get all text content from paragraphs
     const paragraphs: any[] = [];
-    for (const child of body.childNodes) {
-      processNode(child, paragraphs);
+    const pElements = body.querySelectorAll('p');
+    
+    for (const p of pElements) {
+      const text = p.textContent || '';
+      if (text.trim()) {
+        // Check if it's a heading
+        const isHeading = p.querySelector('h1, h2, h3, strong, b');
+        const textRun = new TextRun({
+          text: text,
+          size: isHeading ? 28 : 22,
+          bold: isHeading ? true : false,
+          font: 'Times New Roman',
+        });
+        paragraphs.push(new Paragraph({
+          children: [textRun],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 150 },
+        }));
+      }
     }
 
+    console.log('📝 Found', paragraphs.length, 'paragraphs');
+    
+    // Add paragraphs to document
     const section = docx.sections[0];
     for (const para of paragraphs) {
       section.children.push(para);
     }
 
+    console.log('📝 Generating blob...');
     // Generate blob
     const blob = await Packer.toBlob(doc);
+    console.log('📝 Blob created, size:', blob.size, 'bytes');
     
-    // ✅ Try native "Save As" dialog (Chrome/Edge)
+    if (blob.size === 0) {
+      console.error('❌ Blob is empty!');
+      alert('Error: The document is empty. Please try again.');
+      setIsSaving(false);
+      return;
+    }
+    
+    console.log('📝 Starting download...');
+    // Try native "Save As" dialog (Chrome/Edge)
     try {
       if ('showSaveFilePicker' in window) {
         try {
@@ -657,15 +584,17 @@ const handleSave = async () => {
           await writable.write(blob);
           await writable.close();
           
-          alert('✅ File downloaded successfully!');
+          console.log('✅ File saved successfully via File Picker!');
+          alert('✅ File saved successfully!');
           setIsSaving(false);
           return;
         } catch (fileError: any) {
           if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
+            console.log('📝 User cancelled save');
             setIsSaving(false);
             return;
           }
-          console.log('⚠️ Using fallback download:', fileError);
+          console.log('⚠️ File Picker failed, using fallback:', fileError.message);
         }
       }
       
@@ -682,10 +611,11 @@ const handleSave = async () => {
         URL.revokeObjectURL(url);
       }, 5000);
       
-      alert('✅ File downloaded successfully!');
+      console.log('✅ File downloaded successfully via fallback!');
+      alert('✅ File saved successfully!');
       
-    } catch (error) {
-      console.error('❌ Export error:', error);
+    } catch (downloadError) {
+      console.error('❌ Download error:', downloadError);
       // Last resort: Direct download
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -699,12 +629,14 @@ const handleSave = async () => {
         URL.revokeObjectURL(url);
       }, 5000);
       
-      alert('✅ File downloaded successfully!');
+      alert('✅ File saved successfully!');
     }
     
-  } catch (error) {
-    console.error('❌ Export error:', error);
-    alert('❌ Error exporting file. Please try again.');
+  } catch (error: any) {
+    console.error('❌ Save error DETAILED:', error);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    alert('❌ Error saving file: ' + (error.message || 'Please try again.'));
   }
   setIsSaving(false);
 };
