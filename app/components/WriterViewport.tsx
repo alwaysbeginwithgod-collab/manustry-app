@@ -3,7 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useTheme } from "../context/ThemeContext";
 import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -22,6 +22,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Packer } from 'docx';
 import { Document as DocxDocument, Paragraph, TextRun, AlignmentType, convertInchesToTwip } from 'docx';
+import * as mammoth from 'mammoth';
 import { sendDifyMessage, sendDifyMessageBlocking } from "../utils/difyService";
 import MessageBubble from "./MessageBubble";
 
@@ -54,7 +55,7 @@ const FONT_OPTIONS = [
 // Font size options
 const FONT_SIZES = ['8', '10', '12', '14', '16', '18', '20', '24', '28', '32', '36', '48'];
 
-// ✅ Custom Font Size Extension
+// Custom Font Size Extension
 const FontSize = TextStyle.extend({
   addAttributes() {
     return {
@@ -101,7 +102,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
     }
   };
 
-  // ✅ Fixed: Font size using custom FontSize extension
   const handleFontSizeChange = (size: string) => {
     setFontSize(size);
     editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
@@ -266,7 +266,6 @@ const WriterViewport = forwardRef((props, ref) => {
   const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -276,8 +275,6 @@ const WriterViewport = forwardRef((props, ref) => {
   const [writerConversationId, setWriterConversationId] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [activePanel, setActivePanel] = useState<'editor' | 'chat'>('editor');
-  const [contentLoaded, setContentLoaded] = useState(false);
-  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   
   // Drag state for splitter
   const [splitWidth, setSplitWidth] = useState(50);
@@ -288,15 +285,10 @@ const WriterViewport = forwardRef((props, ref) => {
   const stopRequested = useRef(false);
   const editorRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Convex hooks
-  const saveContent = useMutation(api.writer.saveWriterContent);
+  // Convex hooks - only for loading saved content (optional)
   const loadContent = useQuery(api.writer.loadWriterContent, 
-    user ? { userId: user.id } : "skip"
-  );
-  // ✅ For saving chat history
-  const saveConversation = useMutation(api.chat.saveConversation);
-  const loadConversations = useQuery(api.chat.loadConversations,
     user ? { userId: user.id } : "skip"
   );
 
@@ -325,7 +317,7 @@ const WriterViewport = forwardRef((props, ref) => {
     setShowCustomCategoryInput(false);
   };
 
-  // ✅ Initialize TipTap editor with custom FontSize extension
+  // Initialize TipTap editor with custom FontSize extension
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -346,7 +338,7 @@ const WriterViewport = forwardRef((props, ref) => {
       BulletList,
       OrderedList,
       ListItem,
-      FontSize, // ✅ Custom FontSize extension
+      FontSize,
       FontFamily,
     ],
     content: '<p></p>',
@@ -360,28 +352,12 @@ const WriterViewport = forwardRef((props, ref) => {
     },
   });
 
-  // ✅ Save editor reference when it changes
+  // Save editor reference when it changes
   useEffect(() => {
     if (editor) {
       editorRef.current = editor;
     }
   }, [editor]);
-
-  // Load saved content when available
-  useEffect(() => {
-    if (loadContent && user && editor && !contentLoaded && !isLoadingConversation) {
-      console.log('📂 Loading writer content...');
-      const contentData = loadContent as any;
-      if (contentData) {
-        setTitle(contentData.title || '');
-        setCategory(contentData.category || 'devotion');
-        if (contentData.content) {
-          editor.commands.setContent(contentData.content);
-        }
-        setContentLoaded(true);
-      }
-    }
-  }, [loadContent, user, editor, contentLoaded, isLoadingConversation]);
 
   // Check mobile view
   useEffect(() => {
@@ -454,40 +430,332 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-  // ✅ Load conversation with messages - exposed via ref
-const loadConversationWithMessages = useCallback((chatId: string, messagesData: any[], title: string) => {
-  console.log('📂 WriterViewport: Loading conversation with messages:', chatId, messagesData?.length || 0);
-  
-  if (!messagesData || messagesData.length === 0) {
-    console.log('⚠️ No messages to load');
-    return;
-  }
-  
-  setIsLoadingConversation(true);
-  setContentLoaded(false);
-  setWriterConversationId(chatId);
-  setDifyConversationId(chatId);
-  
-  // Load messages into chat
-  const loadedMessages = messagesData.map((msg: any, index: number) => ({
-    id: `msg-${chatId}-${index}-${Date.now()}`,
-    role: msg.role,
-    content: msg.content,
-    timestamp: new Date(msg.timestamp),
-  }));
-  
-  console.log('📂 Loaded messages:', loadedMessages.length);
-  setMessages(loadedMessages);
-  
-  setIsLoadingConversation(false);
-  setContentLoaded(true);
-  
-  setTimeout(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, 100);
-}, []);
+  // ✅ SAVE: Download as DOCX with native "Save As" dialog
+  const handleSave = async () => {
+    if (!editor) return;
 
-  // ✅ Start new chat - clears messages
+    setIsSaving(true);
+    try {
+      const content = editor?.getHTML() || '';
+      const plainText = editor?.getText() || '';
+      
+      // Get title and category for file name
+      const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
+      
+      // Create DOCX document with formatting
+      const doc = new DocxDocument({
+        sections: [{
+          properties: {
+            page: {
+              margin: {
+                top: convertInchesToTwip(1),
+                bottom: convertInchesToTwip(1),
+                left: convertInchesToTwip(1.5),
+                right: convertInchesToTwip(1),
+              },
+            },
+          },
+          children: [
+            // Title
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: title || 'Untitled Message',
+                  size: 28,
+                  bold: true,
+                  font: 'Times New Roman',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: {
+                after: 300,
+              },
+            }),
+            // Category
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Category: ${category}`,
+                  size: 16,
+                  color: '888888',
+                  font: 'Times New Roman',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: {
+                after: 400,
+              },
+            }),
+            // Separator
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: '─'.repeat(60),
+                  size: 16,
+                  color: 'C9A84C',
+                  font: 'Times New Roman',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: {
+                after: 400,
+              },
+            }),
+          ],
+        }],
+      });
+
+      // Parse HTML content and add to DOCX with formatting
+      const parser = new DOMParser();
+      const htmlDoc = parser.parseFromString(content, 'text/html');
+      const body = htmlDoc.body;
+
+      const processNode = (node: any, parentParagraphs: any[]) => {
+        if (node.nodeType === 3) { // Text node
+          const text = node.textContent || '';
+          if (text.trim()) {
+            const textRun = new TextRun({
+              text: text,
+              size: 22,
+              font: 'Times New Roman',
+            });
+            if (node.parentElement) {
+              const parent = node.parentElement;
+              if (parent.tagName === 'STRONG' || parent.tagName === 'B') {
+                textRun.bold = true;
+              }
+              if (parent.tagName === 'EM' || parent.tagName === 'I') {
+                textRun.italics = true;
+              }
+              if (parent.tagName === 'U') {
+                textRun.underline = {};
+              }
+            }
+            parentParagraphs.push(new Paragraph({
+              children: [textRun],
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 150 },
+            }));
+          }
+          return;
+        }
+
+        if (node.nodeType === 1) {
+          const tag = node.tagName.toLowerCase();
+          
+          if (tag === 'p') {
+            const paraChildren: any[] = [];
+            for (const child of node.childNodes) {
+              if (child.nodeType === 3) {
+                const text = child.textContent || '';
+                if (text.trim()) {
+                  paraChildren.push(new TextRun({
+                    text: text,
+                    size: 22,
+                    font: 'Times New Roman',
+                  }));
+                }
+              } else if (child.nodeType === 1) {
+                const childTag = child.tagName.toLowerCase();
+                if (childTag === 'strong' || childTag === 'b') {
+                  paraChildren.push(new TextRun({
+                    text: child.textContent || '',
+                    size: 22,
+                    bold: true,
+                    font: 'Times New Roman',
+                  }));
+                } else if (childTag === 'em' || childTag === 'i') {
+                  paraChildren.push(new TextRun({
+                    text: child.textContent || '',
+                    size: 22,
+                    italics: true,
+                    font: 'Times New Roman',
+                  }));
+                } else if (childTag === 'u') {
+                  paraChildren.push(new TextRun({
+                    text: child.textContent || '',
+                    size: 22,
+                    underline: {},
+                    font: 'Times New Roman',
+                  }));
+                } else {
+                  paraChildren.push(new TextRun({
+                    text: child.textContent || '',
+                    size: 22,
+                    font: 'Times New Roman',
+                  }));
+                }
+              }
+            }
+            if (paraChildren.length > 0) {
+              parentParagraphs.push(new Paragraph({
+                children: paraChildren,
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 150 },
+              }));
+            }
+          } else if (tag === 'blockquote') {
+            parentParagraphs.push(new Paragraph({
+              children: [
+                new TextRun({
+                  text: node.textContent || '',
+                  size: 22,
+                  italics: true,
+                  color: '888888',
+                  font: 'Times New Roman',
+                }),
+              ],
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 150 },
+            }));
+          } else if (tag === 'div' || tag === 'span') {
+            for (const child of node.childNodes) {
+              processNode(child, parentParagraphs);
+            }
+          } else if (tag === 'ul' || tag === 'ol') {
+            const items = node.querySelectorAll('li');
+            items.forEach((li: any) => {
+              const bullet = tag === 'ul' ? '• ' : `${Array.from(items).indexOf(li) + 1}. `;
+              parentParagraphs.push(new Paragraph({
+                children: [
+                  new TextRun({
+                    text: bullet + (li.textContent || ''),
+                    size: 22,
+                    font: 'Times New Roman',
+                  }),
+                ],
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 100 },
+              }));
+            });
+          }
+        }
+      };
+
+      const paragraphs: any[] = [];
+      for (const child of body.childNodes) {
+        processNode(child, paragraphs);
+      }
+
+      // Add paragraphs to document
+      const section = docx.sections[0];
+      for (const para of paragraphs) {
+        section.children.push(para);
+      }
+
+      // Generate blob and create download
+      const blob = await Packer.toBlob(doc);
+      
+      // ✅ Native "Save As" dialog using File System Access API
+      try {
+        // Modern browsers: Use File System Access API
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{
+            description: 'Word Document',
+            accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] },
+          }],
+        });
+        
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        
+        alert('✅ File saved successfully!');
+      } catch (fileError: any) {
+        // Fallback: If user cancels or browser doesn't support File System Access API
+        if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
+          // User cancelled - do nothing
+          return;
+        }
+        
+        // Legacy fallback: Use download link
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        alert('✅ File downloaded successfully!');
+      }
+      
+    } catch (error) {
+      console.error('❌ Save error:', error);
+      alert('❌ Error saving file. Please try again.');
+    }
+    setIsSaving(false);
+  };
+
+  // ✅ OPEN: Import DOCX file
+  const handleOpen = () => {
+    // Create hidden file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.docx';
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // Parse DOCX to HTML
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        
+        // Load content into editor
+        if (editor) {
+          editor.commands.setContent(result.value);
+        }
+        
+        // Try to extract title from first heading
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = result.value;
+        const firstHeading = tempDiv.querySelector('h1, h2, h3');
+        if (firstHeading) {
+          setTitle(firstHeading.textContent || '');
+        }
+        
+        alert('✅ File opened successfully!');
+      } catch (error) {
+        console.error('❌ Open error:', error);
+        alert('❌ Error opening file. Please make sure it\'s a valid .docx file.');
+      }
+    };
+    
+    input.click();
+  };
+
+  // ✅ Load conversation with messages - exposed via ref
+  const loadConversationWithMessages = useCallback((chatId: string, messagesData: any[], title: string) => {
+    console.log('📂 WriterViewport: Loading conversation with messages:', chatId, messagesData?.length || 0);
+    
+    if (!messagesData || messagesData.length === 0) {
+      console.log('⚠️ No messages to load');
+      return;
+    }
+    
+    setWriterConversationId(chatId);
+    setDifyConversationId(chatId);
+    
+    const loadedMessages = messagesData.map((msg: any, index: number) => ({
+      id: `msg-${chatId}-${index}-${Date.now()}`,
+      role: msg.role,
+      content: msg.content,
+      timestamp: new Date(msg.timestamp),
+    }));
+    
+    setMessages(loadedMessages);
+    
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, []);
+
+  // ✅ Start new chat
   const startNewChat = useCallback(() => {
     console.log('🔄 WriterViewport: New chat');
     setMessages([]);
@@ -497,7 +765,6 @@ const loadConversationWithMessages = useCallback((chatId: string, messagesData: 
     setStreamingText('');
     setIsGenerating(false);
     stopRequested.current = false;
-    // Reset textarea
     if (textareaRef.current) {
       textareaRef.current.value = '';
       textareaRef.current.style.height = 'auto';
@@ -511,37 +778,6 @@ const loadConversationWithMessages = useCallback((chatId: string, messagesData: 
     getCurrentMessages: () => messages,
     getCurrentConversationId: () => writerConversationId,
   }));
-
-  // Save content
-  const handleSave = async () => {
-    if (!user) {
-      alert('Please sign in to save your work.');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const content = editor?.getHTML() || '';
-      const plainText = editor?.getText() || '';
-      
-      const result = await saveContent({
-        userId: user.id,
-        title: title || 'Untitled Message',
-        category: category,
-        content: content,
-        plainText: plainText,
-        lastUpdated: Date.now(),
-      });
-      
-      console.log('✅ Saved successfully:', result);
-      alert('✅ Message saved successfully!');
-      setContentLoaded(true);
-    } catch (error) {
-      console.error('❌ Save error:', error);
-      alert('❌ Error saving message. Please try again.');
-    }
-    setIsSaving(false);
-  };
 
   // ✅ Save chat conversation to history
   const saveChatConversation = useCallback(() => {
@@ -557,7 +793,6 @@ const loadConversationWithMessages = useCallback((chatId: string, messagesData: 
       const conversationId = writerConversationId || `writer-${Date.now()}`;
       const title = messages[0]?.content?.substring(0, 50) || 'Writer Chat';
       
-      // Save to localStorage
       const stored = localStorage.getItem(`manustry_conversations_${user.id}`);
       let existing = stored ? JSON.parse(stored) : [];
       const newConversation = {
@@ -578,477 +813,19 @@ const loadConversationWithMessages = useCallback((chatId: string, messagesData: 
       }
       localStorage.setItem(`manustry_conversations_${user.id}`, JSON.stringify(existing));
       
-      // Save to Convex
-      saveConversation({
-        userId: user.id,
-        chatId: conversationId as any,
-        title: title,
-        messages: messagesToSave,
-        category: 'writer',
-        pinned: false,
-      }).catch(err => console.log('⚠️ Convex save failed:', err));
-      
       setWriterConversationId(conversationId);
       console.log('💾 Writer chat saved to history');
     } catch (error) {
       console.error('❌ Save chat error:', error);
     }
-  }, [user, messages, saveConversation, writerConversationId]);
+  }, [user, messages, writerConversationId]);
 
-  // ✅ Save chat when messages change
+  // Save chat when messages change
   useEffect(() => {
     if (messages.length > 0 && user) {
       saveChatConversation();
     }
   }, [messages, user, saveChatConversation]);
-
-// Export as PDF - using jsPDF with HTML content
-const handleExportPDF = async () => {
-  setIsExporting(true);
-  try {
-    const plainText = editor?.getText() || '';
-    
-    if (!plainText.trim()) {
-      alert('No content to export. Please write something first.');
-      setIsExporting(false);
-      return;
-    }
-
-    // Get the HTML content
-    const contentHTML = editor?.getHTML() || '';
-
-    // Create a clean HTML document
-    const docHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>${title || 'Untitled Message'}</title>
-        <style>
-          body {
-            font-family: 'Times New Roman', serif;
-            font-size: 12pt;
-            line-height: 1.8;
-            color: #000000;
-            background: #ffffff;
-            padding: 40px;
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          h1 {
-            text-align: center;
-            font-size: 24pt;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #000000;
-          }
-          .category {
-            text-align: center;
-            font-size: 10pt;
-            color: #888888;
-            margin-bottom: 30px;
-          }
-          p {
-            margin-bottom: 10px;
-            color: #000000;
-          }
-          blockquote {
-            border-left: 4px solid #C9A84C;
-            padding-left: 20px;
-            margin: 10px 0;
-            font-style: italic;
-            color: #333333;
-          }
-          ul {
-            padding-left: 30px;
-            margin: 10px 0;
-          }
-          ol {
-            padding-left: 30px;
-            margin: 10px 0;
-          }
-          li {
-            margin-bottom: 5px;
-            color: #000000;
-          }
-          strong, b {
-            font-weight: bold;
-          }
-          em, i {
-            font-style: italic;
-          }
-          u {
-            text-decoration: underline;
-          }
-          hr {
-            border: none;
-            border-top: 1px solid #C9A84C;
-            margin: 20px 0;
-          }
-          .scene-break {
-            text-align: center;
-            color: #C9A84C;
-            font-size: 14pt;
-            letter-spacing: 4px;
-            margin: 20px 0;
-          }
-        </style>
-      </head>
-      <body>
-        <h1>${title || 'Untitled Message'}</h1>
-        <div class="category">Category: ${category}</div>
-        ${contentHTML}
-      </body>
-      </html>
-    `;
-
-    // Create a blob URL
-    const blob = new Blob([docHTML], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-
-    // Open in a new window for printing/PDF
-    const printWindow = window.open(url, '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      alert('Please allow popups to export PDF');
-      setIsExporting(false);
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    // Wait for the window to load, then trigger print
-    printWindow.onload = function() {
-      setTimeout(() => {
-        printWindow.print();
-        // Clean up
-        setTimeout(() => {
-          URL.revokeObjectURL(url);
-        }, 1000);
-      }, 500);
-    };
-
-    console.log('✅ PDF exported successfully');
-  } catch (error) {
-    console.error('❌ PDF export error:', error);
-    alert('Error exporting PDF. Please try again.');
-  }
-  setIsExporting(false);
-};
-
-// ✅ Auto-save every 30 seconds
-useEffect(() => {
-  if (!user || !editor || !contentLoaded) return;
-  
-  const autoSaveInterval = setInterval(() => {
-    const content = editor?.getHTML() || '';
-    const plainText = editor?.getText() || '';
-    
-    // Only save if there's content
-    if (content && content !== '<p></p>') {
-      console.log('💾 Auto-saving...');
-      saveContent({
-        userId: user.id,
-        title: title || 'Untitled Message',
-        category: category,
-        content: content,
-        plainText: plainText,
-        lastUpdated: Date.now(),
-      }).catch(err => console.log('⚠️ Auto-save failed:', err));
-    }
-  }, 30000); // Every 30 seconds
-  
-  return () => clearInterval(autoSaveInterval);
-}, [user, editor, title, category, contentLoaded, saveContent]);
-
-// ✅ Auto-save before page unload
-useEffect(() => {
-  const handleBeforeUnload = () => {
-    if (editor && user) {
-      const content = editor?.getHTML() || '';
-      const plainText = editor?.getText() || '';
-      
-      if (content && content !== '<p></p>') {
-        // Use synchronous storage for beforeunload
-        localStorage.setItem(`manustry_writer_backup_${user.id}`, JSON.stringify({
-          title,
-          category,
-          content,
-          plainText,
-          timestamp: Date.now(),
-        }));
-      }
-    }
-  };
-  
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-}, [editor, user, title, category]);
-
-// Export as DOCX - preserves formatting properly
-const handleExportDOCX = async () => {
-  setIsExporting(true);
-  try {
-    const plainText = editor?.getText() || '';
-    
-    if (!plainText.trim()) {
-      alert('No content to export. Please write something first.');
-      setIsExporting(false);
-      return;
-    }
-
-    // Get the HTML content
-    const contentHTML = editor?.getHTML() || '';
-    
-    // Parse HTML to extract formatted content
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(contentHTML, 'text/html');
-    const body = doc.body;
-
-    // Build DOCX content
-    const children: any[] = [];
-
-    // Add Title
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: title || 'Untitled Message',
-            size: 28,
-            bold: true,
-            font: 'Times New Roman',
-            color: '000000',
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: {
-          after: 300,
-        },
-      })
-    );
-
-    // Add Category
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Category: ${category}`,
-            size: 16,
-            color: '888888',
-            font: 'Times New Roman',
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: {
-          after: 400,
-        },
-      })
-    );
-
-    // Process content nodes
-    const processNode = (node: any) => {
-      if (node.nodeType === 3) { // Text node
-        const text = node.textContent || '';
-        if (text.trim()) {
-          return new TextRun({
-            text: text,
-            size: 22,
-            font: 'Times New Roman',
-            color: '000000',
-          });
-        }
-        return null;
-      }
-
-      if (node.nodeType === 1) { // Element node
-        const tag = node.tagName.toLowerCase();
-        
-        if (tag === 'p' || tag === 'div') {
-          const runs: any[] = [];
-          for (const child of node.childNodes) {
-            const result = processNode(child);
-            if (result) {
-              if (Array.isArray(result)) {
-                runs.push(...result);
-              } else {
-                runs.push(result);
-              }
-            }
-          }
-          if (runs.length > 0) {
-            return new Paragraph({
-              children: runs,
-              alignment: AlignmentType.LEFT,
-              spacing: { after: 150 },
-            });
-          }
-          return null;
-        }
-
-        if (tag === 'strong' || tag === 'b') {
-          const text = node.textContent || '';
-          if (text.trim()) {
-            return new TextRun({
-              text: text,
-              size: 22,
-              bold: true,
-              font: 'Times New Roman',
-              color: '000000',
-            });
-          }
-          return null;
-        }
-
-        if (tag === 'em' || tag === 'i') {
-          const text = node.textContent || '';
-          if (text.trim()) {
-            return new TextRun({
-              text: text,
-              size: 22,
-              italics: true,
-              font: 'Times New Roman',
-              color: '000000',
-            });
-          }
-          return null;
-        }
-
-        if (tag === 'u') {
-          const text = node.textContent || '';
-          if (text.trim()) {
-            return new TextRun({
-              text: text,
-              size: 22,
-              underline: {},
-              font: 'Times New Roman',
-              color: '000000',
-            });
-          }
-          return null;
-        }
-
-        if (tag === 'blockquote') {
-          const text = node.textContent || '';
-          if (text.trim()) {
-            return new Paragraph({
-              children: [
-                new TextRun({
-                  text: text,
-                  size: 22,
-                  italics: true,
-                  color: '666666',
-                  font: 'Times New Roman',
-                }),
-              ],
-              alignment: AlignmentType.LEFT,
-              spacing: { after: 150 },
-            });
-          }
-          return null;
-        }
-
-        if (tag === 'ul' || tag === 'ol') {
-          const items = node.querySelectorAll('li');
-          const results: any[] = [];
-          items.forEach((li: any, idx: number) => {
-            const bullet = tag === 'ul' ? '• ' : `${idx + 1}. `;
-            const text = li.textContent || '';
-            if (text.trim()) {
-              results.push(
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: bullet + text,
-                      size: 22,
-                      font: 'Times New Roman',
-                      color: '000000',
-                    }),
-                  ],
-                  alignment: AlignmentType.LEFT,
-                  spacing: { after: 100 },
-                })
-              );
-            }
-          });
-          return results;
-        }
-
-        if (tag === 'hr') {
-          return new Paragraph({
-            children: [
-              new TextRun({
-                text: '✦ ✦ ✦',
-                size: 22,
-                color: 'C9A84C',
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 200, after: 200 },
-          });
-        }
-
-        // For any other tag, process children
-        const results: any[] = [];
-        for (const child of node.childNodes) {
-          const result = processNode(child);
-          if (result) {
-            if (Array.isArray(result)) {
-              results.push(...result);
-            } else {
-              results.push(result);
-            }
-          }
-        }
-        return results.length > 0 ? results : null;
-      }
-      return null;
-    };
-
-    // Process all children of body
-    for (const child of body.childNodes) {
-      const result = processNode(child);
-      if (result) {
-        if (Array.isArray(result)) {
-          children.push(...result);
-        } else {
-          children.push(result);
-        }
-      }
-    }
-
-    // Create the document
-    const docx = new DocxDocument({
-      sections: [{
-        properties: {
-          page: {
-            margin: {
-              top: convertInchesToTwip(1),
-              bottom: convertInchesToTwip(1),
-              left: convertInchesToTwip(1.5),
-              right: convertInchesToTwip(1),
-            },
-          },
-        },
-        children: children,
-      }],
-    });
-
-    const blob = await Packer.toBlob(docx);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${title || 'message'}.docx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    console.log('✅ DOCX exported successfully');
-  } catch (error) {
-    console.error('❌ DOCX export error:', error);
-    alert('Error exporting DOCX. Please try again.');
-  }
-  setIsExporting(false);
-};
 
   // Chat functions with Dify integration
   const handleSendMessage = async () => {
@@ -1068,7 +845,6 @@ const handleExportDOCX = async () => {
     setIsGenerating(true);
     setStreamingText('');
     
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -1274,6 +1050,7 @@ const handleExportDOCX = async () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* ✅ SAVE Button - Downloads as DOCX */}
             <button
               onClick={handleSave}
               disabled={isSaving}
@@ -1292,41 +1069,14 @@ const handleExportDOCX = async () => {
               )}
             </button>
 
-            <div className="relative group">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`${panelBg} border ${cardBorder} px-3 py-2 rounded-lg hover:bg-[#C9A84C]/10 transition text-sm flex items-center gap-1 ${textColor}`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Export
-              </button>
-              {isOpen && (
-                <div className={`absolute right-0 mt-2 w-48 ${panelBg} border ${cardBorder} rounded-lg shadow-xl z-50 overflow-hidden`}>
-                  <button
-                    onClick={() => { handleExportPDF(); setIsOpen(false); }}
-                    disabled={isExporting}
-                    className={`w-full px-4 py-3 text-sm ${textColor} hover:bg-[#C9A84C]/10 transition flex items-center gap-2 disabled:opacity-50`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export PDF
-                  </button>
-                  <button
-                    onClick={() => { handleExportDOCX(); setIsOpen(false); }}
-                    disabled={isExporting}
-                    className={`w-full px-4 py-3 text-sm ${textColor} hover:bg-[#C9A84C]/10 transition flex items-center gap-2 border-t ${cardBorder} disabled:opacity-50`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export DOCX
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* ✅ OPEN Button - Imports DOCX */}
+            <button
+              onClick={handleOpen}
+              className={`${panelBg} border ${cardBorder} px-4 py-2 rounded-lg hover:bg-[#C9A84C]/10 transition text-sm flex items-center gap-2 ${textColor}`}
+            >
+              <span className="text-base">📂</span>
+              Open
+            </button>
           </div>
         </div>
       </div>
