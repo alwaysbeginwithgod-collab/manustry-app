@@ -430,264 +430,243 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-  // ✅ SAVE: Download as DOCX with native "Save As" dialog
-  const handleSave = async () => {
-    if (!editor) return;
+// ✅ SAVE: Download as DOCX with reliable method
+const handleSave = async () => {
+  if (!editor) return;
 
-    setIsSaving(true);
-    try {
-      const content = editor?.getHTML() || '';
-      const plainText = editor?.getText() || '';
-      
-      // Get title and category for file name
-      const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
-      
-      // Create DOCX document with formatting
-      const doc = new DocxDocument({
-        sections: [{
-          properties: {
-            page: {
-              margin: {
-                top: convertInchesToTwip(1),
-                bottom: convertInchesToTwip(1),
-                left: convertInchesToTwip(1.5),
-                right: convertInchesToTwip(1),
-              },
+  setIsSaving(true);
+  try {
+    const content = editor?.getHTML() || '';
+    
+    // Get title and category for file name
+    const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
+    
+    // Create DOCX document with formatting
+    const doc = new DocxDocument({
+      sections: [{
+        properties: {
+          page: {
+            margin: {
+              top: convertInchesToTwip(1),
+              bottom: convertInchesToTwip(1),
+              left: convertInchesToTwip(1.5),
+              right: convertInchesToTwip(1),
             },
           },
-          children: [
-            // Title
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: title || 'Untitled Message',
-                  size: 28,
+        },
+        children: [
+          // Title
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: title || 'Untitled Message',
+                size: 28,
+                bold: true,
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: {
+              after: 300,
+            },
+          }),
+          // Category
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Category: ${category}`,
+                size: 16,
+                color: '888888',
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: {
+              after: 400,
+            },
+          }),
+          // Separator
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: '─'.repeat(60),
+                size: 16,
+                color: 'C9A84C',
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: {
+              after: 400,
+            },
+          }),
+        ],
+      }],
+    });
+
+    // Parse HTML content and add to DOCX with formatting
+    const parser = new DOMParser();
+    const htmlDoc = parser.parseFromString(content, 'text/html');
+    const body = htmlDoc.body;
+
+    const processNode = (node: any, parentParagraphs: any[]) => {
+      if (node.nodeType === 3) { // Text node
+        const text = node.textContent || '';
+        if (text.trim()) {
+          const textRun = new TextRun({
+            text: text,
+            size: 22,
+            font: 'Times New Roman',
+          });
+          if (node.parentElement) {
+            const parent = node.parentElement;
+            if (parent.tagName === 'STRONG' || parent.tagName === 'B') {
+              textRun.bold = true;
+            }
+            if (parent.tagName === 'EM' || parent.tagName === 'I') {
+              textRun.italics = true;
+            }
+            if (parent.tagName === 'U') {
+              textRun.underline = {};
+            }
+          }
+          parentParagraphs.push(new Paragraph({
+            children: [textRun],
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 150 },
+          }));
+        }
+        return;
+      }
+
+      if (node.nodeType === 1) {
+        const tag = node.tagName.toLowerCase();
+        
+        if (tag === 'p') {
+          const paraChildren: any[] = [];
+          for (const child of node.childNodes) {
+            if (child.nodeType === 3) {
+              const text = child.textContent || '';
+              if (text.trim()) {
+                paraChildren.push(new TextRun({
+                  text: text,
+                  size: 22,
+                  font: 'Times New Roman',
+                }));
+              }
+            } else if (child.nodeType === 1) {
+              const childTag = child.tagName.toLowerCase();
+              if (childTag === 'strong' || childTag === 'b') {
+                paraChildren.push(new TextRun({
+                  text: child.textContent || '',
+                  size: 22,
                   bold: true,
                   font: 'Times New Roman',
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: {
-                after: 300,
-              },
-            }),
-            // Category
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Category: ${category}`,
-                  size: 16,
-                  color: '888888',
-                  font: 'Times New Roman',
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: {
-                after: 400,
-              },
-            }),
-            // Separator
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: '─'.repeat(60),
-                  size: 16,
-                  color: 'C9A84C',
-                  font: 'Times New Roman',
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: {
-                after: 400,
-              },
-            }),
-          ],
-        }],
-      });
-
-      // Parse HTML content and add to DOCX with formatting
-      const parser = new DOMParser();
-      const htmlDoc = parser.parseFromString(content, 'text/html');
-      const body = htmlDoc.body;
-
-      const processNode = (node: any, parentParagraphs: any[]) => {
-        if (node.nodeType === 3) { // Text node
-          const text = node.textContent || '';
-          if (text.trim()) {
-            const textRun = new TextRun({
-              text: text,
-              size: 22,
-              font: 'Times New Roman',
-            });
-            if (node.parentElement) {
-              const parent = node.parentElement;
-              if (parent.tagName === 'STRONG' || parent.tagName === 'B') {
-                textRun.bold = true;
-              }
-              if (parent.tagName === 'EM' || parent.tagName === 'I') {
-                textRun.italics = true;
-              }
-              if (parent.tagName === 'U') {
-                textRun.underline = {};
-              }
-            }
-            parentParagraphs.push(new Paragraph({
-              children: [textRun],
-              alignment: AlignmentType.LEFT,
-              spacing: { after: 150 },
-            }));
-          }
-          return;
-        }
-
-        if (node.nodeType === 1) {
-          const tag = node.tagName.toLowerCase();
-          
-          if (tag === 'p') {
-            const paraChildren: any[] = [];
-            for (const child of node.childNodes) {
-              if (child.nodeType === 3) {
-                const text = child.textContent || '';
-                if (text.trim()) {
-                  paraChildren.push(new TextRun({
-                    text: text,
-                    size: 22,
-                    font: 'Times New Roman',
-                  }));
-                }
-              } else if (child.nodeType === 1) {
-                const childTag = child.tagName.toLowerCase();
-                if (childTag === 'strong' || childTag === 'b') {
-                  paraChildren.push(new TextRun({
-                    text: child.textContent || '',
-                    size: 22,
-                    bold: true,
-                    font: 'Times New Roman',
-                  }));
-                } else if (childTag === 'em' || childTag === 'i') {
-                  paraChildren.push(new TextRun({
-                    text: child.textContent || '',
-                    size: 22,
-                    italics: true,
-                    font: 'Times New Roman',
-                  }));
-                } else if (childTag === 'u') {
-                  paraChildren.push(new TextRun({
-                    text: child.textContent || '',
-                    size: 22,
-                    underline: {},
-                    font: 'Times New Roman',
-                  }));
-                } else {
-                  paraChildren.push(new TextRun({
-                    text: child.textContent || '',
-                    size: 22,
-                    font: 'Times New Roman',
-                  }));
-                }
-              }
-            }
-            if (paraChildren.length > 0) {
-              parentParagraphs.push(new Paragraph({
-                children: paraChildren,
-                alignment: AlignmentType.LEFT,
-                spacing: { after: 150 },
-              }));
-            }
-          } else if (tag === 'blockquote') {
-            parentParagraphs.push(new Paragraph({
-              children: [
-                new TextRun({
-                  text: node.textContent || '',
+                }));
+              } else if (childTag === 'em' || childTag === 'i') {
+                paraChildren.push(new TextRun({
+                  text: child.textContent || '',
                   size: 22,
                   italics: true,
-                  color: '888888',
+                  font: 'Times New Roman',
+                }));
+              } else if (childTag === 'u') {
+                paraChildren.push(new TextRun({
+                  text: child.textContent || '',
+                  size: 22,
+                  underline: {},
+                  font: 'Times New Roman',
+                }));
+              } else {
+                paraChildren.push(new TextRun({
+                  text: child.textContent || '',
+                  size: 22,
+                  font: 'Times New Roman',
+                }));
+              }
+            }
+          }
+          if (paraChildren.length > 0) {
+            parentParagraphs.push(new Paragraph({
+              children: paraChildren,
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 150 },
+            }));
+          }
+        } else if (tag === 'blockquote') {
+          parentParagraphs.push(new Paragraph({
+            children: [
+              new TextRun({
+                text: node.textContent || '',
+                size: 22,
+                italics: true,
+                color: '888888',
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 150 },
+          }));
+        } else if (tag === 'div' || tag === 'span') {
+          for (const child of node.childNodes) {
+            processNode(child, parentParagraphs);
+          }
+        } else if (tag === 'ul' || tag === 'ol') {
+          const items = node.querySelectorAll('li');
+          items.forEach((li: any) => {
+            const bullet = tag === 'ul' ? '• ' : `${Array.from(items).indexOf(li) + 1}. `;
+            parentParagraphs.push(new Paragraph({
+              children: [
+                new TextRun({
+                  text: bullet + (li.textContent || ''),
+                  size: 22,
                   font: 'Times New Roman',
                 }),
               ],
               alignment: AlignmentType.LEFT,
-              spacing: { after: 150 },
+              spacing: { after: 100 },
             }));
-          } else if (tag === 'div' || tag === 'span') {
-            for (const child of node.childNodes) {
-              processNode(child, parentParagraphs);
-            }
-          } else if (tag === 'ul' || tag === 'ol') {
-            const items = node.querySelectorAll('li');
-            items.forEach((li: any) => {
-              const bullet = tag === 'ul' ? '• ' : `${Array.from(items).indexOf(li) + 1}. `;
-              parentParagraphs.push(new Paragraph({
-                children: [
-                  new TextRun({
-                    text: bullet + (li.textContent || ''),
-                    size: 22,
-                    font: 'Times New Roman',
-                  }),
-                ],
-                alignment: AlignmentType.LEFT,
-                spacing: { after: 100 },
-              }));
-            });
-          }
+          });
         }
-      };
-
-      const paragraphs: any[] = [];
-      for (const child of body.childNodes) {
-        processNode(child, paragraphs);
       }
+    };
 
-      // Add paragraphs to document
-      const section = docx.sections[0];
-      for (const para of paragraphs) {
-        section.children.push(para);
-      }
-
-      // Generate blob and create download
-      const blob = await Packer.toBlob(doc);
-      
-      // ✅ Native "Save As" dialog using File System Access API
-      try {
-        // Modern browsers: Use File System Access API
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{
-            description: 'Word Document',
-            accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] },
-          }],
-        });
-        
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        
-        alert('✅ File saved successfully!');
-      } catch (fileError: any) {
-        // Fallback: If user cancels or browser doesn't support File System Access API
-        if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
-          // User cancelled - do nothing
-          return;
-        }
-        
-        // Legacy fallback: Use download link
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        alert('✅ File downloaded successfully!');
-      }
-      
-    } catch (error) {
-      console.error('❌ Save error:', error);
-      alert('❌ Error saving file. Please try again.');
+    const paragraphs: any[] = [];
+    for (const child of body.childNodes) {
+      processNode(child, paragraphs);
     }
-    setIsSaving(false);
-  };
+
+    // Add paragraphs to document
+    const section = docx.sections[0];
+    for (const para of paragraphs) {
+      section.children.push(para);
+    }
+
+    // Generate blob
+    const blob = await Packer.toBlob(doc);
+    
+    // ✅ SIMPLE RELIABLE DOWNLOAD - Works in all browsers
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the URL after a delay
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 5000);
+    
+    alert('✅ File downloaded successfully!');
+    
+  } catch (error) {
+    console.error('❌ Save error:', error);
+    alert('❌ Error saving file. Please try again.');
+  }
+  setIsSaving(false);
+};
 
   // ✅ OPEN: Import DOCX file
   const handleOpen = () => {
