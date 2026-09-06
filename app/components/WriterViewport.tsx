@@ -430,18 +430,29 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-// ✅ SAVE: Download as DOCX with native "Save As" dialog (Chrome/Edge) or fallback
+// ✅ EXPORT: Save as DOCX with native "Save As" dialog
 const handleSave = async () => {
-  if (!editor) return;
+  if (!editor) {
+    alert('Please write some content first.');
+    return;
+  }
 
   setIsSaving(true);
   try {
     const content = editor?.getHTML() || '';
     
+    // Check if content is empty
+    const plainText = editor?.getText() || '';
+    if (!plainText.trim()) {
+      alert('Please write some content before exporting.');
+      setIsSaving(false);
+      return;
+    }
+    
     // Get title and category for file name
     const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
     
-    // Create DOCX document with formatting
+    // Create DOCX document
     const doc = new DocxDocument({
       sections: [{
         properties: {
@@ -455,7 +466,6 @@ const handleSave = async () => {
           },
         },
         children: [
-          // Title
           new Paragraph({
             children: [
               new TextRun({
@@ -466,11 +476,8 @@ const handleSave = async () => {
               }),
             ],
             alignment: AlignmentType.CENTER,
-            spacing: {
-              after: 300,
-            },
+            spacing: { after: 300 },
           }),
-          // Category
           new Paragraph({
             children: [
               new TextRun({
@@ -481,11 +488,8 @@ const handleSave = async () => {
               }),
             ],
             alignment: AlignmentType.CENTER,
-            spacing: {
-              after: 400,
-            },
+            spacing: { after: 400 },
           }),
-          // Separator
           new Paragraph({
             children: [
               new TextRun({
@@ -496,15 +500,13 @@ const handleSave = async () => {
               }),
             ],
             alignment: AlignmentType.CENTER,
-            spacing: {
-              after: 400,
-            },
+            spacing: { after: 400 },
           }),
         ],
       }],
     });
 
-    // Parse HTML content and add to DOCX with formatting
+    // Parse HTML content
     const parser = new DOMParser();
     const htmlDoc = parser.parseFromString(content, 'text/html');
     const body = htmlDoc.body;
@@ -520,15 +522,9 @@ const handleSave = async () => {
           });
           if (node.parentElement) {
             const parent = node.parentElement;
-            if (parent.tagName === 'STRONG' || parent.tagName === 'B') {
-              textRun.bold = true;
-            }
-            if (parent.tagName === 'EM' || parent.tagName === 'I') {
-              textRun.italics = true;
-            }
-            if (parent.tagName === 'U') {
-              textRun.underline = {};
-            }
+            if (parent.tagName === 'STRONG' || parent.tagName === 'B') textRun.bold = true;
+            if (parent.tagName === 'EM' || parent.tagName === 'I') textRun.italics = true;
+            if (parent.tagName === 'U') textRun.underline = {};
           }
           parentParagraphs.push(new Paragraph({
             children: [textRun],
@@ -541,7 +537,6 @@ const handleSave = async () => {
 
       if (node.nodeType === 1) {
         const tag = node.tagName.toLowerCase();
-        
         if (tag === 'p') {
           const paraChildren: any[] = [];
           for (const child of node.childNodes) {
@@ -646,7 +641,6 @@ const handleSave = async () => {
     
     // ✅ Try native "Save As" dialog (Chrome/Edge)
     try {
-      // Check if the File System Access API is supported
       if ('showSaveFilePicker' in window) {
         try {
           const handle = await (window as any).showSaveFilePicker({
@@ -663,21 +657,19 @@ const handleSave = async () => {
           await writable.write(blob);
           await writable.close();
           
-          alert('✅ File saved successfully!');
+          alert('✅ File downloaded successfully!');
           setIsSaving(false);
           return;
         } catch (fileError: any) {
-          // User cancelled - do nothing
           if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
             setIsSaving(false);
             return;
           }
-          // Fall through to fallback
-          console.log('⚠️ File System Access API failed, using fallback:', fileError);
+          console.log('⚠️ Using fallback download:', fileError);
         }
       }
       
-      // ✅ Fallback: Direct download (works in all browsers)
+      // ✅ Fallback: Direct download
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -693,9 +685,8 @@ const handleSave = async () => {
       alert('✅ File downloaded successfully!');
       
     } catch (error) {
-      console.error('❌ Save error:', error);
-      
-      // ✅ Last resort: Direct download
+      console.error('❌ Export error:', error);
+      // Last resort: Direct download
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -712,8 +703,8 @@ const handleSave = async () => {
     }
     
   } catch (error) {
-    console.error('❌ Save error:', error);
-    alert('❌ Error saving file. Please try again.');
+    console.error('❌ Export error:', error);
+    alert('❌ Error exporting file. Please try again.');
   }
   setIsSaving(false);
 };
