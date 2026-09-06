@@ -406,216 +406,133 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-  // ✅ SAVE FUNCTION - Using the imported docx library
-  const handleSave = async () => {
-    console.log('📝 Save started...');
+// ✅ SIMPLE SAVE: Direct download to Downloads folder
+const handleSave = async () => {
+  console.log('📝 Save started...');
+  
+  if (!editor) {
+    alert('Please write some content first.');
+    return;
+  }
+
+  setIsSaving(true);
+  
+  try {
+    const content = editor?.getHTML() || '';
+    const plainText = editor?.getText() || '';
     
-    if (!editor) {
-      alert('Please write some content first.');
+    if (!plainText.trim()) {
+      alert('Please write some content before saving.');
+      setIsSaving(false);
       return;
     }
-
-    setIsSaving(true);
     
-    try {
-      const content = editor?.getHTML() || '';
-      const plainText = editor?.getText() || '';
-      
-      console.log('📝 Content length:', content.length);
-      console.log('📝 Plain text length:', plainText.length);
-      
-      if (!plainText.trim()) {
-        alert('Please write some content before saving.');
-        setIsSaving(false);
-        return;
-      }
-      
-      const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
-      console.log('📝 File name:', fileName);
-      
-      // ✅ Create DOCX document using docx. prefix
-      const doc = new docx.Document({
-        sections: [{
-          properties: {
-            page: {
-              margin: {
-                top: docx.convertInchesToTwip(1),
-                bottom: docx.convertInchesToTwip(1),
-                left: docx.convertInchesToTwip(1.5),
-                right: docx.convertInchesToTwip(1),
-              },
+    // ✅ SIMPLE DOCX CREATION - No complex parsing
+    const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
+    console.log('📝 File name:', fileName);
+    
+    // Create a simple document with the content as text
+    const doc = new docx.Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: {
+              top: docx.convertInchesToTwip(1),
+              bottom: docx.convertInchesToTwip(1),
+              left: docx.convertInchesToTwip(1.5),
+              right: docx.convertInchesToTwip(1),
             },
           },
-          children: [
-            new docx.Paragraph({
-              children: [
-                new docx.TextRun({
-                  text: title || 'Untitled Message',
-                  size: 28,
-                  bold: true,
-                  font: 'Times New Roman',
-                }),
-              ],
-              alignment: docx.AlignmentType.CENTER,
-              spacing: { after: 300 },
-            }),
-            new docx.Paragraph({
-              children: [
-                new docx.TextRun({
-                  text: `Category: ${category}`,
-                  size: 16,
-                  color: '888888',
-                  font: 'Times New Roman',
-                }),
-              ],
-              alignment: docx.AlignmentType.CENTER,
-              spacing: { after: 400 },
-            }),
-            new docx.Paragraph({
-              children: [
-                new docx.TextRun({
-                  text: '─'.repeat(60),
-                  size: 16,
-                  color: 'C9A84C',
-                  font: 'Times New Roman',
-                }),
-              ],
-              alignment: docx.AlignmentType.CENTER,
-              spacing: { after: 400 },
-            }),
-          ],
-        }],
-      });
+        },
+        children: [
+          // Title
+          new docx.Paragraph({
+            children: [
+              new docx.TextRun({
+                text: title || 'Untitled Message',
+                size: 28,
+                bold: true,
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: docx.AlignmentType.CENTER,
+            spacing: { after: 300 },
+          }),
+          // Category
+          new docx.Paragraph({
+            children: [
+              new docx.TextRun({
+                text: `Category: ${category}`,
+                size: 16,
+                color: '888888',
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: docx.AlignmentType.CENTER,
+            spacing: { after: 400 },
+          }),
+          // Separator
+          new docx.Paragraph({
+            children: [
+              new docx.TextRun({
+                text: '─'.repeat(60),
+                size: 16,
+                color: 'C9A84C',
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: docx.AlignmentType.CENTER,
+            spacing: { after: 400 },
+          }),
+          // Content - simple paragraphs from plain text
+          new docx.Paragraph({
+            children: [
+              new docx.TextRun({
+                text: plainText,
+                size: 22,
+                font: 'Times New Roman',
+              }),
+            ],
+            alignment: docx.AlignmentType.LEFT,
+            spacing: { after: 150 },
+          }),
+        ],
+      }],
+    });
 
-      console.log('📝 Parsing HTML content...');
-      
-      // Parse HTML content
-      const parser = new DOMParser();
-      const htmlDoc = parser.parseFromString(content, 'text/html');
-      const body = htmlDoc.body;
-
-      // Get all paragraphs
-      const paragraphs: any[] = [];
-      const allParagraphs = body.querySelectorAll('p, div, blockquote');
-      
-      for (const element of allParagraphs) {
-        const text = element.textContent || '';
-        if (text.trim()) {
-          const isHeading = element.querySelector('strong, b, h1, h2, h3') !== null;
-          const isBlockquote = element.tagName.toLowerCase() === 'blockquote';
-          
-          const textRun = new docx.TextRun({
-            text: text,
-            size: isHeading ? 28 : 22,
-            bold: isHeading ? true : false,
-            font: 'Times New Roman',
-          });
-          
-          paragraphs.push(new docx.Paragraph({
-            children: [textRun],
-            alignment: isBlockquote ? docx.AlignmentType.CENTER : docx.AlignmentType.LEFT,
-            spacing: { 
-              after: isBlockquote ? 200 : 150,
-              before: isBlockquote ? 200 : 0,
-            },
-          }));
-        }
-      }
-
-      console.log('📝 Found', paragraphs.length, 'paragraphs');
-      
-      // Add paragraphs to document
-      const section = doc.sections[0];
-      for (const para of paragraphs) {
-        section.children.push(para);
-      }
-
-      console.log('📝 Generating blob...');
-      const blob = await docx.Packer.toBlob(doc);
-      console.log('📝 Blob created, size:', blob.size, 'bytes');
-      
-      if (blob.size === 0) {
-        console.error('❌ Blob is empty!');
-        alert('Error: The document is empty. Please try again.');
-        setIsSaving(false);
-        return;
-      }
-      
-      console.log('📝 Starting download...');
-      
-      // Try native "Save As" dialog (Chrome/Edge)
-      try {
-        if ('showSaveFilePicker' in window) {
-          try {
-            const handle = await (window as any).showSaveFilePicker({
-              suggestedName: fileName,
-              types: [{
-                description: 'Word Document',
-                accept: { 
-                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] 
-                },
-              }],
-            });
-            
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            
-            console.log('✅ File saved successfully via File Picker!');
-            alert('✅ File saved successfully!');
-            setIsSaving(false);
-            return;
-          } catch (fileError: any) {
-            if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
-              console.log('📝 User cancelled save');
-              setIsSaving(false);
-              return;
-            }
-            console.log('⚠️ File Picker failed, using fallback:', fileError.message);
-          }
-        }
-        
-        // Fallback: Direct download
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        setTimeout(() => {
-          URL.revokeObjectURL(url);
-        }, 5000);
-        
-        console.log('✅ File downloaded successfully!');
-        alert('✅ File saved successfully!');
-        
-      } catch (downloadError) {
-        console.error('❌ Download error:', downloadError);
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        setTimeout(() => {
-          URL.revokeObjectURL(url);
-        }, 5000);
-        
-        alert('✅ File saved successfully!');
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Save error DETAILED:', error);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error stack:', error.stack);
-      alert('❌ Error saving file: ' + (error.message || 'Please try again.'));
+    console.log('📝 Generating blob...');
+    const blob = await docx.Packer.toBlob(doc);
+    console.log('📝 Blob created, size:', blob.size, 'bytes');
+    
+    if (blob.size === 0) {
+      console.error('❌ Blob is empty!');
+      alert('Error: The document is empty. Please try again.');
+      setIsSaving(false);
+      return;
     }
-    setIsSaving(false);
-  };
+    
+    // ✅ DIRECT DOWNLOAD - Always works
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 5000);
+    
+    console.log('✅ File downloaded successfully!');
+    alert('✅ File saved to your Downloads folder!');
+    
+  } catch (error: any) {
+    console.error('❌ Save error:', error);
+    alert('❌ Error saving file: ' + (error.message || 'Please try again.'));
+  }
+  setIsSaving(false);
+};
 
   const handleOpen = () => {
     const input = document.createElement('input');
@@ -976,7 +893,7 @@ const WriterViewport = forwardRef((props, ref) => {
               ) : (
                 <>
                   <span className="text-base">💾</span>
-                  Save
+                  Export
                 </>
               )}
             </button>
