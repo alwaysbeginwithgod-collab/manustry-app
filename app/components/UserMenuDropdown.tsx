@@ -2,7 +2,7 @@
 
 import { useUser, SignOutButton } from "@clerk/nextjs";
 import { useTheme } from "../context/ThemeContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EmailModal from "./EmailModal";
 
 interface UserMenuDropdownProps {
@@ -17,6 +17,13 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
   const [showHelp, setShowHelp] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
+  // ✅ Reset states when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      // Don't reset modal states here - let them be controlled individually
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const bgColor = darkMode ? "bg-[#1A1F2E]" : "bg-white";
@@ -25,21 +32,43 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
   const subTextColor = darkMode ? "text-gray-400" : "text-gray-600";
   const hoverBg = darkMode ? "hover:bg-[#C9A84C]/10" : "hover:bg-gray-100";
 
-  // ✅ FIXED: Instant response - close dropdown first, then open modal
-  const handleDownloadClick = () => {
-    onClose();
-    // Small delay to let dropdown close animation complete
-    setTimeout(() => setShowDownload(true), 50);
+  // ✅ FIXED: Direct handlers with immediate response
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('📱 Download clicked');
+    setShowDownload(true);
+    // Don't close dropdown immediately - let the modal appear on top
   };
 
-  const handleHelpClick = () => {
-    onClose();
-    setTimeout(() => setShowHelp(true), 50);
+  const handleHelpClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('❓ Help clicked');
+    setShowHelp(true);
   };
 
-  const handleFeedbackClick = () => {
+  const handleFeedbackClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('💬 Feedback clicked');
+    setIsEmailModalOpen(true);
+  };
+
+  // ✅ Close handlers for modals
+  const handleDownloadClose = () => {
+    setShowDownload(false);
     onClose();
-    setTimeout(() => setIsEmailModalOpen(true), 50);
+  };
+
+  const handleHelpClose = () => {
+    setShowHelp(false);
+    onClose();
+  };
+
+  const handleFeedbackClose = () => {
+    setIsEmailModalOpen(false);
+    onClose();
   };
 
   return (
@@ -93,12 +122,12 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
       </div>
 
       {/* ============================================================ */}
-      {/* DOWNLOAD APP MODAL */}
+      {/* DOWNLOAD APP MODAL - Rendered even when dropdown is closed */}
       {/* ============================================================ */}
       {showDownload && (
         <Modal
           title="📱 Download MANUSTRY App"
-          onClose={() => setShowDownload(false)}
+          onClose={handleDownloadClose}
           darkMode={darkMode}
         >
           <div className="text-center">
@@ -149,7 +178,7 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
       {showHelp && (
         <Modal
           title="❓ Help & Features"
-          onClose={() => setShowHelp(false)}
+          onClose={handleHelpClose}
           darkMode={darkMode}
         >
           <div className={`space-y-4 text-sm ${textColor}`}>
@@ -203,7 +232,7 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
       {/* ✅ Email Modal for Feedback */}
       <EmailModal 
         isOpen={isEmailModalOpen} 
-        onClose={() => setIsEmailModalOpen(false)}
+        onClose={handleFeedbackClose}
         source="user-menu"
         defaultSubject="MANUSTRY User Feedback"
         defaultMessage={`Hello MANUSTRY team,\n\nI would like to share some feedback:\n\n1. \n2. \n3. \n\n---\nSent from MANUSTRY User Menu\nUser: ${user?.fullName || user?.username || 'Anonymous'}\nEmail: ${user?.emailAddresses[0]?.emailAddress || 'Not provided'}`}
