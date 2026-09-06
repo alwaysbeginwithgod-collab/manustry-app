@@ -235,7 +235,6 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
         onClose={handleFeedbackClose}
         source="user-menu"
         defaultSubject="MANUSTRY User Feedback"
-        defaultMessage={`Hello MANUSTRY team,\n\nI would like to share some feedback:\n\n1. \n2. \n3. \n\n---\nSent from MANUSTRY User Menu\nUser: ${user?.fullName || user?.username || 'Anonymous'}\nEmail: ${user?.emailAddresses[0]?.emailAddress || 'Not provided'}`}
       />
     </>
   );
