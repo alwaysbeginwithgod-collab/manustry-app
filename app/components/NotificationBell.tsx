@@ -82,6 +82,7 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
     );
   };
 
+  // ✅ Check for updates on mount
   useEffect(() => {
     const checkForUpdates = async () => {
       try {
@@ -91,7 +92,7 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
           setNotifications(prev => [{
             id: 'update',
             title: '🔄 New Update Available',
-            message: `Version ${data.version} is ready!`,
+            message: `Version ${data.version} is ready! Tap to refresh.`,
             type: 'update',
             read: false,
             timestamp: new Date(),
@@ -108,20 +109,46 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
     return () => clearInterval(interval);
   }, []);
 
+  // ✅ Handle hard refresh for updates
+  const handleUpdateClick = () => {
+    console.log('🔄 Hard refresh triggered');
+    // Clear all caches
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        keys.forEach(key => caches.delete(key));
+      });
+    }
+    // Remove version storage
+    localStorage.removeItem('manustry_app_version');
+    localStorage.removeItem('manustry_build_time');
+    // Force hard reload
+    window.location.reload();
+  };
+
   // ✅ Handle notification click
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
+    
+    // ✅ If it's an update notification, trigger hard refresh
+    if (notification.id === 'update' || notification.link === '/update') {
+      handleUpdateClick();
+      setIsOpen(false);
+      return;
+    }
     
     // ✅ If it's a devotion notification, navigate to DevotionViewport
     if (notification.type === 'devotion' && onNotificationClick) {
       onNotificationClick();
       setIsOpen(false);
+      return;
     }
     
     // ✅ If there's a custom link, open it
     if (notification.link) {
       console.log('🔗 Notification link:', notification.link);
     }
+    
+    setIsOpen(false);
   };
 
   // ✅ Handle feedback button click
@@ -223,6 +250,11 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
                             Click to view →
                           </span>
                         )}
+                        {notification.id === 'update' && (
+                          <span className="inline-block mt-1 text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                            🔄 Tap to update now
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -232,7 +264,7 @@ export default function NotificationBell({ onNotificationClick }: NotificationBe
                 <div className="p-3 border-t border-[#C9A84C]/20 text-center sticky bottom-0 bg-inherit">
                   <button
                     onClick={handleFeedbackClick}
-                    className="text-xs text-[#C9A84C] hover:text-[#E8D5A3] transition border border-[#C9A84C]/30 px-4 py-1.5 rounded hover:bg-[#C9A84C]/10 inline-block mb-2"
+                    className="text-xs text-[#C9A84C] hover:text-[#E8D5A3] transition border border-[#C9A84C]/30 px-4 py-1.5 rounded hover:bg-[#C9A84C]/10 inline-block mb-2 w-full"
                   >
                     💬 Send Feedback / Help
                   </button>

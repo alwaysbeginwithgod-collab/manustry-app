@@ -903,7 +903,7 @@ const handleSave = async () => {
               className={`${panelBg} border ${cardBorder} px-4 py-2 rounded-lg hover:bg-[#C9A84C]/10 transition text-sm flex items-center gap-2 ${textColor}`}
             >
               <span className="text-base">📂</span>
-              Open
+              Import
             </button>
           </div>
         </div>

@@ -1,8 +1,10 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import VersionChecker from "./components/VersionChecker"; // ✅ Add this
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Playfair_Display({ 
@@ -31,7 +33,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${playfair.variable} ${cormorant.variable}`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <VersionChecker /> {/* ✅ Add this */}
+          {children}
+        </Providers>
       </body>
     </html>
   );
