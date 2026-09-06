@@ -430,7 +430,7 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-// ✅ SAVE: Download as DOCX with reliable method
+// ✅ SAVE: Download as DOCX with native "Save As" dialog (Chrome/Edge) or fallback
 const handleSave = async () => {
   if (!editor) return;
 
@@ -510,7 +510,7 @@ const handleSave = async () => {
     const body = htmlDoc.body;
 
     const processNode = (node: any, parentParagraphs: any[]) => {
-      if (node.nodeType === 3) { // Text node
+      if (node.nodeType === 3) {
         const text = node.textContent || '';
         if (text.trim()) {
           const textRun = new TextRun({
@@ -636,7 +636,6 @@ const handleSave = async () => {
       processNode(child, paragraphs);
     }
 
-    // Add paragraphs to document
     const section = docx.sections[0];
     for (const para of paragraphs) {
       section.children.push(para);
@@ -645,21 +644,72 @@ const handleSave = async () => {
     // Generate blob
     const blob = await Packer.toBlob(doc);
     
-    // ✅ SIMPLE RELIABLE DOWNLOAD - Works in all browsers
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up the URL after a delay
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 5000);
-    
-    alert('✅ File downloaded successfully!');
+    // ✅ Try native "Save As" dialog (Chrome/Edge)
+    try {
+      // Check if the File System Access API is supported
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{
+              description: 'Word Document',
+              accept: { 
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] 
+              },
+            }],
+          });
+          
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          
+          alert('✅ File saved successfully!');
+          setIsSaving(false);
+          return;
+        } catch (fileError: any) {
+          // User cancelled - do nothing
+          if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
+            setIsSaving(false);
+            return;
+          }
+          // Fall through to fallback
+          console.log('⚠️ File System Access API failed, using fallback:', fileError);
+        }
+      }
+      
+      // ✅ Fallback: Direct download (works in all browsers)
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 5000);
+      
+      alert('✅ File downloaded successfully!');
+      
+    } catch (error) {
+      console.error('❌ Save error:', error);
+      
+      // ✅ Last resort: Direct download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 5000);
+      
+      alert('✅ File downloaded successfully!');
+    }
     
   } catch (error) {
     console.error('❌ Save error:', error);
