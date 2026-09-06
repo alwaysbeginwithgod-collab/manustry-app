@@ -20,7 +20,8 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { Packer, Document as DocxDocument, Paragraph, TextRun, AlignmentType, convertInchesToTwip } from 'docx';
+// ✅ IMPORTANT: Use this import syntax
+import * as docx from 'docx';
 import * as mammoth from 'mammoth';
 import { sendDifyMessage, sendDifyMessageBlocking } from "../utils/difyService";
 import MessageBubble from "./MessageBubble";
@@ -108,7 +109,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
 
   return (
     <div className={`flex flex-wrap items-center gap-1.5 p-2 border-b ${darkMode ? 'border-[#C9A84C]/20' : 'border-[#C9A84C]/30'} flex-shrink-0`}>
-      {/* Font Family Dropdown */}
       <select
         value={fontFamily}
         onChange={(e) => handleFontChange(e.target.value)}
@@ -122,7 +122,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
         ))}
       </select>
 
-      {/* Font Size Dropdown */}
       <select
         value={fontSize}
         onChange={(e) => handleFontSizeChange(e.target.value)}
@@ -138,7 +137,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
 
       <span className={`w-px h-8 ${darkMode ? 'bg-[#C9A84C]/20' : 'bg-[#C9A84C]/30'}`}></span>
 
-      {/* Bold */}
       <button
         onClick={() => editor.chain().focus().toggleBold().run()}
         className={buttonClass(editor.isActive('bold'))}
@@ -147,7 +145,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
         <strong className="text-base">B</strong>
       </button>
       
-      {/* Italic */}
       <button
         onClick={() => editor.chain().focus().toggleItalic().run()}
         className={buttonClass(editor.isActive('italic'))}
@@ -156,7 +153,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
         <em className="text-base">I</em>
       </button>
       
-      {/* Underline */}
       <button
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         className={buttonClass(editor.isActive('underline'))}
@@ -167,7 +163,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
       
       <span className={`w-px h-8 ${darkMode ? 'bg-[#C9A84C]/20' : 'bg-[#C9A84C]/30'}`}></span>
       
-      {/* Bullet List */}
       <button
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         className={buttonClass(editor.isActive('bulletList'))}
@@ -181,7 +176,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
         </svg>
       </button>
       
-      {/* Numbered List */}
       <button
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         className={buttonClass(editor.isActive('orderedList'))}
@@ -195,7 +189,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
       
       <span className={`w-px h-8 ${darkMode ? 'bg-[#C9A84C]/20' : 'bg-[#C9A84C]/30'}`}></span>
       
-      {/* Align Left */}
       <button
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
         className={buttonClass(editor.isActive({ textAlign: 'left' }))}
@@ -206,7 +199,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
         </svg>
       </button>
       
-      {/* Align Center */}
       <button
         onClick={() => editor.chain().focus().setTextAlign('center').run()}
         className={buttonClass(editor.isActive({ textAlign: 'center' }))}
@@ -217,7 +209,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
         </svg>
       </button>
       
-      {/* Align Right */}
       <button
         onClick={() => editor.chain().focus().setTextAlign('right').run()}
         className={buttonClass(editor.isActive({ textAlign: 'right' }))}
@@ -228,7 +219,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
         </svg>
       </button>
       
-      {/* Justify */}
       <button
         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
         className={buttonClass(editor.isActive({ textAlign: 'justify' }))}
@@ -241,7 +231,6 @@ const RichTextToolbar = ({ editor }: { editor: any }) => {
       
       <span className={`w-px h-8 ${darkMode ? 'bg-[#C9A84C]/20' : 'bg-[#C9A84C]/30'}`}></span>
       
-      {/* Blockquote */}
       <button
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
         className={buttonClass(editor.isActive('blockquote'))}
@@ -275,7 +264,6 @@ const WriterViewport = forwardRef((props, ref) => {
   const [isMobileView, setIsMobileView] = useState(false);
   const [activePanel, setActivePanel] = useState<'editor' | 'chat'>('editor');
   
-  // Drag state for splitter
   const [splitWidth, setSplitWidth] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -284,14 +272,11 @@ const WriterViewport = forwardRef((props, ref) => {
   const stopRequested = useRef(false);
   const editorRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Convex hooks - only for loading saved content (optional)
   const loadContent = useQuery(api.writer.loadWriterContent, 
     user ? { userId: user.id } : "skip"
   );
 
-  // Load custom categories from localStorage
   useEffect(() => {
     if (user) {
       const saved = localStorage.getItem(`manustry_custom_categories_${user.id}`);
@@ -305,7 +290,6 @@ const WriterViewport = forwardRef((props, ref) => {
     }
   }, [user]);
 
-  // Save custom categories to localStorage
   const saveCustomCategory = (newCategory: string) => {
     if (!user || !newCategory.trim()) return;
     const updated = [...customCategories, newCategory.trim()];
@@ -316,7 +300,6 @@ const WriterViewport = forwardRef((props, ref) => {
     setShowCustomCategoryInput(false);
   };
 
-  // Initialize TipTap editor with custom FontSize extension
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -351,14 +334,12 @@ const WriterViewport = forwardRef((props, ref) => {
     },
   });
 
-  // Save editor reference when it changes
   useEffect(() => {
     if (editor) {
       editorRef.current = editor;
     }
   }, [editor]);
 
-  // Check mobile view
   useEffect(() => {
     const checkMobile = () => {
       setIsMobileView(window.innerWidth < 768);
@@ -368,7 +349,6 @@ const WriterViewport = forwardRef((props, ref) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Scroll to bottom of chat
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -377,7 +357,6 @@ const WriterViewport = forwardRef((props, ref) => {
     scrollToBottom();
   }, [messages, streamingText, scrollToBottom]);
 
-  // Auto-resize textarea
   const autoResizeTextarea = useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -390,7 +369,6 @@ const WriterViewport = forwardRef((props, ref) => {
     autoResizeTextarea();
   }, [chatInput, autoResizeTextarea]);
 
-  // Drag handlers for splitter
   const handleDragStart = (e: React.MouseEvent) => {
     setIsDragging(true);
     e.preventDefault();
@@ -421,7 +399,6 @@ const WriterViewport = forwardRef((props, ref) => {
     };
   }, [isDragging]);
 
-  // Get user name
   const getUserName = useCallback((): string => {
     if (user?.fullName) return user.fullName;
     if (user?.firstName) return user.firstName;
@@ -429,226 +406,218 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-// ✅ SAVE: Working version without HeadingLevel
-const handleSave = async () => {
-  console.log('📝 Save started...');
-  
-  if (!editor) {
-    alert('Please write some content first.');
-    return;
-  }
-
-  setIsSaving(true);
-  
-  try {
-    const content = editor?.getHTML() || '';
-    const plainText = editor?.getText() || '';
+  // ✅ SAVE FUNCTION - Using the imported docx library
+  const handleSave = async () => {
+    console.log('📝 Save started...');
     
-    console.log('📝 Content length:', content.length);
-    console.log('📝 Plain text length:', plainText.length);
-    
-    if (!plainText.trim()) {
-      alert('Please write some content before saving.');
-      setIsSaving(false);
+    if (!editor) {
+      alert('Please write some content first.');
       return;
     }
+
+    setIsSaving(true);
     
-    // Get title and category for file name
-    const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
-    console.log('📝 File name:', fileName);
-    
-    // ✅ Create DOCX document - NO HeadingLevel
-    const doc = new DocxDocument({
-      sections: [{
-        properties: {
-          page: {
-            margin: {
-              top: convertInchesToTwip(1),
-              bottom: convertInchesToTwip(1),
-              left: convertInchesToTwip(1.5),
-              right: convertInchesToTwip(1),
+    try {
+      const content = editor?.getHTML() || '';
+      const plainText = editor?.getText() || '';
+      
+      console.log('📝 Content length:', content.length);
+      console.log('📝 Plain text length:', plainText.length);
+      
+      if (!plainText.trim()) {
+        alert('Please write some content before saving.');
+        setIsSaving(false);
+        return;
+      }
+      
+      const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
+      console.log('📝 File name:', fileName);
+      
+      // ✅ Create DOCX document using docx. prefix
+      const doc = new docx.Document({
+        sections: [{
+          properties: {
+            page: {
+              margin: {
+                top: docx.convertInchesToTwip(1),
+                bottom: docx.convertInchesToTwip(1),
+                left: docx.convertInchesToTwip(1.5),
+                right: docx.convertInchesToTwip(1),
+              },
             },
           },
-        },
-        children: [
-          // Title
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: title || 'Untitled Message',
-                size: 28,
-                bold: true,
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 300 },
-          }),
-          // Category
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: `Category: ${category}`,
-                size: 16,
-                color: '888888',
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 400 },
-          }),
-          // Separator line
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: '─'.repeat(60),
-                size: 16,
-                color: 'C9A84C',
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 400 },
-          }),
-        ],
-      }],
-    });
+          children: [
+            new docx.Paragraph({
+              children: [
+                new docx.TextRun({
+                  text: title || 'Untitled Message',
+                  size: 28,
+                  bold: true,
+                  font: 'Times New Roman',
+                }),
+              ],
+              alignment: docx.AlignmentType.CENTER,
+              spacing: { after: 300 },
+            }),
+            new docx.Paragraph({
+              children: [
+                new docx.TextRun({
+                  text: `Category: ${category}`,
+                  size: 16,
+                  color: '888888',
+                  font: 'Times New Roman',
+                }),
+              ],
+              alignment: docx.AlignmentType.CENTER,
+              spacing: { after: 400 },
+            }),
+            new docx.Paragraph({
+              children: [
+                new docx.TextRun({
+                  text: '─'.repeat(60),
+                  size: 16,
+                  color: 'C9A84C',
+                  font: 'Times New Roman',
+                }),
+              ],
+              alignment: docx.AlignmentType.CENTER,
+              spacing: { after: 400 },
+            }),
+          ],
+        }],
+      });
 
-    // ✅ Parse HTML content into simple paragraphs
-    const parser = new DOMParser();
-    const htmlDoc = parser.parseFromString(content, 'text/html');
-    const body = htmlDoc.body;
+      console.log('📝 Parsing HTML content...');
+      
+      // Parse HTML content
+      const parser = new DOMParser();
+      const htmlDoc = parser.parseFromString(content, 'text/html');
+      const body = htmlDoc.body;
 
-    // Get all paragraphs
-    const paragraphs: any[] = [];
-    const allParagraphs = body.querySelectorAll('p, div, blockquote');
-    
-    for (const element of allParagraphs) {
-      const text = element.textContent || '';
-      if (text.trim()) {
-        // Check if it's a heading (contains bold or large text)
-        const isHeading = element.querySelector('strong, b, h1, h2, h3') !== null;
-        const textRun = new TextRun({
-          text: text,
-          size: isHeading ? 28 : 22,
-          bold: isHeading ? true : false,
-          font: 'Times New Roman',
-        });
-        
-        // Check if it's a blockquote
-        const isBlockquote = element.tagName.toLowerCase() === 'blockquote';
-        
-        paragraphs.push(new Paragraph({
-          children: [textRun],
-          alignment: isBlockquote ? AlignmentType.CENTER : AlignmentType.LEFT,
-          spacing: { 
-            after: isBlockquote ? 200 : 150,
-            before: isBlockquote ? 200 : 0,
-          },
-          indent: isBlockquote ? { left: 720, right: 720 } : undefined,
-        }));
-      }
-    }
-
-    console.log('📝 Found', paragraphs.length, 'paragraphs');
-    
-    // Add paragraphs to document
-    const section = docx.sections[0];
-    for (const para of paragraphs) {
-      section.children.push(para);
-    }
-
-    console.log('📝 Generating blob...');
-    const blob = await Packer.toBlob(doc);
-    console.log('📝 Blob created, size:', blob.size, 'bytes');
-    
-    if (blob.size === 0) {
-      console.error('❌ Blob is empty!');
-      alert('Error: The document is empty. Please try again.');
-      setIsSaving(false);
-      return;
-    }
-    
-    console.log('📝 Starting download...');
-    
-    // ✅ Try native "Save As" dialog (Chrome/Edge)
-    try {
-      if ('showSaveFilePicker' in window) {
-        try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{
-              description: 'Word Document',
-              accept: { 
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] 
-              },
-            }],
+      // Get all paragraphs
+      const paragraphs: any[] = [];
+      const allParagraphs = body.querySelectorAll('p, div, blockquote');
+      
+      for (const element of allParagraphs) {
+        const text = element.textContent || '';
+        if (text.trim()) {
+          const isHeading = element.querySelector('strong, b, h1, h2, h3') !== null;
+          const isBlockquote = element.tagName.toLowerCase() === 'blockquote';
+          
+          const textRun = new docx.TextRun({
+            text: text,
+            size: isHeading ? 28 : 22,
+            bold: isHeading ? true : false,
+            font: 'Times New Roman',
           });
           
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          
-          console.log('✅ File saved successfully via File Picker!');
-          alert('✅ File saved successfully!');
-          setIsSaving(false);
-          return;
-        } catch (fileError: any) {
-          if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
-            console.log('📝 User cancelled save');
-            setIsSaving(false);
-            return;
-          }
-          console.log('⚠️ File Picker failed, using fallback:', fileError.message);
+          paragraphs.push(new docx.Paragraph({
+            children: [textRun],
+            alignment: isBlockquote ? docx.AlignmentType.CENTER : docx.AlignmentType.LEFT,
+            spacing: { 
+              after: isBlockquote ? 200 : 150,
+              before: isBlockquote ? 200 : 0,
+            },
+          }));
         }
       }
-      
-      // ✅ Fallback: Direct download (works in all browsers)
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 5000);
-      
-      console.log('✅ File downloaded successfully!');
-      alert('✅ File saved successfully!');
-      
-    } catch (downloadError) {
-      console.error('❌ Download error:', downloadError);
-      // Last resort
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 5000);
-      
-      alert('✅ File saved successfully!');
-    }
-    
-  } catch (error: any) {
-    console.error('❌ Save error DETAILED:', error);
-    console.error('❌ Error message:', error.message);
-    console.error('❌ Error stack:', error.stack);
-    alert('❌ Error saving file: ' + (error.message || 'Please try again.'));
-  }
-  setIsSaving(false);
-};
 
-  // ✅ OPEN: Import DOCX file
+      console.log('📝 Found', paragraphs.length, 'paragraphs');
+      
+      // Add paragraphs to document
+      const section = doc.sections[0];
+      for (const para of paragraphs) {
+        section.children.push(para);
+      }
+
+      console.log('📝 Generating blob...');
+      const blob = await docx.Packer.toBlob(doc);
+      console.log('📝 Blob created, size:', blob.size, 'bytes');
+      
+      if (blob.size === 0) {
+        console.error('❌ Blob is empty!');
+        alert('Error: The document is empty. Please try again.');
+        setIsSaving(false);
+        return;
+      }
+      
+      console.log('📝 Starting download...');
+      
+      // Try native "Save As" dialog (Chrome/Edge)
+      try {
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await (window as any).showSaveFilePicker({
+              suggestedName: fileName,
+              types: [{
+                description: 'Word Document',
+                accept: { 
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] 
+                },
+              }],
+            });
+            
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            
+            console.log('✅ File saved successfully via File Picker!');
+            alert('✅ File saved successfully!');
+            setIsSaving(false);
+            return;
+          } catch (fileError: any) {
+            if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
+              console.log('📝 User cancelled save');
+              setIsSaving(false);
+              return;
+            }
+            console.log('⚠️ File Picker failed, using fallback:', fileError.message);
+          }
+        }
+        
+        // Fallback: Direct download
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 5000);
+        
+        console.log('✅ File downloaded successfully!');
+        alert('✅ File saved successfully!');
+        
+      } catch (downloadError) {
+        console.error('❌ Download error:', downloadError);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 5000);
+        
+        alert('✅ File saved successfully!');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Save error DETAILED:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      alert('❌ Error saving file: ' + (error.message || 'Please try again.'));
+    }
+    setIsSaving(false);
+  };
+
   const handleOpen = () => {
-    // Create hidden file input
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.docx';
@@ -659,16 +628,12 @@ const handleSave = async () => {
       
       try {
         const arrayBuffer = await file.arrayBuffer();
-        
-        // Parse DOCX to HTML
         const result = await mammoth.convertToHtml({ arrayBuffer });
         
-        // Load content into editor
         if (editor) {
           editor.commands.setContent(result.value);
         }
         
-        // Try to extract title from first heading
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = result.value;
         const firstHeading = tempDiv.querySelector('h1, h2, h3');
@@ -686,7 +651,6 @@ const handleSave = async () => {
     input.click();
   };
 
-  // ✅ Load conversation with messages - exposed via ref
   const loadConversationWithMessages = useCallback((chatId: string, messagesData: any[], title: string) => {
     console.log('📂 WriterViewport: Loading conversation with messages:', chatId, messagesData?.length || 0);
     
@@ -712,7 +676,6 @@ const handleSave = async () => {
     }, 100);
   }, []);
 
-  // ✅ Start new chat
   const startNewChat = useCallback(() => {
     console.log('🔄 WriterViewport: New chat');
     setMessages([]);
@@ -728,7 +691,6 @@ const handleSave = async () => {
     }
   }, []);
 
-  // ✅ Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     loadConversationWithMessages,
     startNewChat,
@@ -736,7 +698,6 @@ const handleSave = async () => {
     getCurrentConversationId: () => writerConversationId,
   }));
 
-  // ✅ Save chat conversation to history
   const saveChatConversation = useCallback(() => {
     if (!user || messages.length === 0) return;
     
@@ -777,14 +738,12 @@ const handleSave = async () => {
     }
   }, [user, messages, writerConversationId]);
 
-  // Save chat when messages change
   useEffect(() => {
     if (messages.length > 0 && user) {
       saveChatConversation();
     }
   }, [messages, user, saveChatConversation]);
 
-  // Chat functions with Dify integration
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isGenerating) return;
     
@@ -888,7 +847,6 @@ const handleSave = async () => {
     }
   };
 
-  // Stop response
   const stopResponse = useCallback(() => {
     console.log('⏹️ Stop pressed');
     stopRequested.current = true;
@@ -909,7 +867,6 @@ const handleSave = async () => {
     }
   };
 
-  // Uniform dark background
   const darkBg = darkMode ? "bg-[#0F1318]" : "bg-[#F5F0EB]";
   const panelBg = darkMode ? "bg-[#0F1318]" : "bg-[#F5F0EB]";
   const cardBorder = darkMode ? "border-[#C9A84C]/20" : "border-[#C9A84C]/30";
@@ -930,7 +887,6 @@ const handleSave = async () => {
 
   return (
     <div className={`h-full w-full ${darkBg} flex flex-col overflow-hidden`} style={{ position: 'relative', zIndex: 20 }}>
-      {/* Top Bar */}
       <div className={`${panelBg} border-b ${cardBorder} p-3 flex-shrink-0`}>
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -1007,7 +963,6 @@ const handleSave = async () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* ✅ SAVE Button - Downloads as DOCX */}
             <button
               onClick={handleSave}
               disabled={isSaving}
@@ -1026,7 +981,6 @@ const handleSave = async () => {
               )}
             </button>
 
-            {/* ✅ OPEN Button - Imports DOCX */}
             <button
               onClick={handleOpen}
               className={`${panelBg} border ${cardBorder} px-4 py-2 rounded-lg hover:bg-[#C9A84C]/10 transition text-sm flex items-center gap-2 ${textColor}`}
@@ -1038,29 +992,27 @@ const handleSave = async () => {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
       <div ref={containerRef} className={`flex-1 flex overflow-hidden ${panelBg}`}>
         {isMobileView ? (
-          // Mobile View
           <div className={`flex-1 flex flex-col ${panelBg}`}>
             <div className={`flex border-b ${cardBorder} p-2 gap-2 flex-shrink-0`}>
               <button
                 onClick={() => setActivePanel('editor')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${(
                   activePanel === 'editor'
                     ? 'bg-[#C9A84C] text-[#1A1F2E]'
                     : darkMode ? 'text-gray-400 hover:text-[#E8D5A3]' : 'text-gray-600 hover:text-[#C9A84C]'
-                }`}
+                )}`}
               >
                 ✍️ YOUR MESSAGE
               </button>
               <button
                 onClick={() => setActivePanel('chat')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition ${(
                   activePanel === 'chat'
                     ? 'bg-[#C9A84C] text-[#1A1F2E]'
                     : darkMode ? 'text-gray-400 hover:text-[#E8D5A3]' : 'text-gray-600 hover:text-[#C9A84C]'
-                }`}
+                )}`}
               >
                 🕮 MANUSTRY ASSISTANT
               </button>
@@ -1160,7 +1112,6 @@ const handleSave = async () => {
                     </div>
                   )}
                 </div>
-                {/* Chat input at bottom with footer */}
                 <div className={`p-3 border-t ${cardBorder} flex-shrink-0 ${panelBg}`}>
                   <div className="flex items-end gap-2">
                     <textarea
@@ -1198,8 +1149,6 @@ const handleSave = async () => {
                       </button>
                     )}
                   </div>
-                  
-                  {/* Footer */}
                   <div className="text-center mt-2">
                     <p className={`text-sm italic ${subTextColor}`}>
                       "A dose of God's Word a day, will keep you going all day."
@@ -1218,9 +1167,7 @@ const handleSave = async () => {
             )}
           </div>
         ) : (
-          // Desktop View - Dual Panel with Splitter
           <>
-            {/* Left Panel - Editor */}
             <div 
               style={{ width: `${splitWidth}%` }} 
               className={`h-full flex flex-col overflow-hidden ${panelBg}`}
@@ -1237,11 +1184,10 @@ const handleSave = async () => {
               </div>
             </div>
 
-            {/* Draggable Splitter */}
             <div
-              className={`w-1.5 cursor-col-resize hover:bg-[#C9A84C] transition-colors relative flex-shrink-0 ${
+              className={`w-1.5 cursor-col-resize hover:bg-[#C9A84C] transition-colors relative flex-shrink-0 ${(
                 isDragging ? 'bg-[#C9A84C]' : 'bg-[#C9A84C]/30'
-              }`}
+              )}`}
               onMouseDown={handleDragStart}
               style={{ touchAction: 'none' }}
             >
@@ -1254,7 +1200,6 @@ const handleSave = async () => {
               </div>
             </div>
 
-            {/* Right Panel - Chat */}
             <div 
               style={{ width: `${100 - splitWidth}%` }} 
               className={`h-full flex flex-col overflow-hidden ${panelBg}`}
@@ -1351,7 +1296,6 @@ const handleSave = async () => {
                 )}
               </div>
 
-              {/* Chat input at the BOTTOM with footer */}
               <div className={`p-3 border-t ${cardBorder} flex-shrink-0 ${panelBg}`}>
                 <div className="flex items-end gap-2">
                   <textarea
@@ -1389,8 +1333,6 @@ const handleSave = async () => {
                     </button>
                   )}
                 </div>
-                
-                {/* Footer */}
                 <div className="text-center mt-2">
                   <p className={`text-sm italic ${subTextColor}`}>
                     "A dose of God's Word a day, will keep you going all day."
