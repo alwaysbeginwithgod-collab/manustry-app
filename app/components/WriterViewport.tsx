@@ -429,215 +429,42 @@ const WriterViewport = forwardRef((props, ref) => {
     return 'Friend';
   }, [user]);
 
-// ✅ SAVE: Download as DOCX with detailed error logging
+// ✅ SIMPLIFIED TEST: Create a simple DOCX
 const handleSave = async () => {
-  if (!editor) {
-    alert('Please write some content first.');
-    return;
-  }
-
-  console.log('📝 Starting save process...');
-  setIsSaving(true);
+  console.log('📝 Save started...');
   
   try {
-    const content = editor?.getHTML() || '';
-    console.log('📝 Content length:', content.length);
-    
-    // Check if content is empty
-    const plainText = editor?.getText() || '';
-    console.log('📝 Plain text length:', plainText.length);
-    
-    if (!plainText.trim()) {
-      alert('Please write some content before saving.');
-      setIsSaving(false);
-      return;
-    }
-    
-    // Get title and category for file name
-    const fileName = `${title || 'Untitled'}_${category}_${new Date().toISOString().split('T')[0]}.docx`;
-    console.log('📝 File name:', fileName);
-    
-    console.log('📝 Creating DOCX document...');
-    // Create DOCX document - SIMPLIFIED VERSION
+    // Create a simple document
     const doc = new DocxDocument({
       sections: [{
-        properties: {
-          page: {
-            margin: {
-              top: convertInchesToTwip(1),
-              bottom: convertInchesToTwip(1),
-              left: convertInchesToTwip(1.5),
-              right: convertInchesToTwip(1),
-            },
-          },
-        },
         children: [
-          // Title
           new Paragraph({
-            children: [
-              new TextRun({
-                text: title || 'Untitled Message',
-                size: 28,
-                bold: true,
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 300 },
+            text: 'Test Document',
+            heading: HeadingLevel.HEADING_1,
           }),
-          // Category
           new Paragraph({
-            children: [
-              new TextRun({
-                text: `Category: ${category}`,
-                size: 16,
-                color: '888888',
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 400 },
-          }),
-          // Separator
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: '─'.repeat(60),
-                size: 16,
-                color: 'C9A84C',
-                font: 'Times New Roman',
-              }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 400 },
+            text: 'This is a test.',
           }),
         ],
       }],
     });
-
-    console.log('📝 Parsing HTML content...');
-    // Parse HTML content - SIMPLIFIED VERSION
-    const parser = new DOMParser();
-    const htmlDoc = parser.parseFromString(content, 'text/html');
-    const body = htmlDoc.body;
-
-    // Get all text content from paragraphs
-    const paragraphs: any[] = [];
-    const pElements = body.querySelectorAll('p');
     
-    for (const p of pElements) {
-      const text = p.textContent || '';
-      if (text.trim()) {
-        // Check if it's a heading
-        const isHeading = p.querySelector('h1, h2, h3, strong, b');
-        const textRun = new TextRun({
-          text: text,
-          size: isHeading ? 28 : 22,
-          bold: isHeading ? true : false,
-          font: 'Times New Roman',
-        });
-        paragraphs.push(new Paragraph({
-          children: [textRun],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 150 },
-        }));
-      }
-    }
-
-    console.log('📝 Found', paragraphs.length, 'paragraphs');
-    
-    // Add paragraphs to document
-    const section = docx.sections[0];
-    for (const para of paragraphs) {
-      section.children.push(para);
-    }
-
-    console.log('📝 Generating blob...');
-    // Generate blob
     const blob = await Packer.toBlob(doc);
-    console.log('📝 Blob created, size:', blob.size, 'bytes');
+    console.log('📝 Blob size:', blob.size);
     
-    if (blob.size === 0) {
-      console.error('❌ Blob is empty!');
-      alert('Error: The document is empty. Please try again.');
-      setIsSaving(false);
-      return;
-    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'test.docx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     
-    console.log('📝 Starting download...');
-    // Try native "Save As" dialog (Chrome/Edge)
-    try {
-      if ('showSaveFilePicker' in window) {
-        try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{
-              description: 'Word Document',
-              accept: { 
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] 
-              },
-            }],
-          });
-          
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          
-          console.log('✅ File saved successfully via File Picker!');
-          alert('✅ File saved successfully!');
-          setIsSaving(false);
-          return;
-        } catch (fileError: any) {
-          if (fileError.name === 'AbortError' || fileError.message?.includes('abort')) {
-            console.log('📝 User cancelled save');
-            setIsSaving(false);
-            return;
-          }
-          console.log('⚠️ File Picker failed, using fallback:', fileError.message);
-        }
-      }
-      
-      // ✅ Fallback: Direct download
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 5000);
-      
-      console.log('✅ File downloaded successfully via fallback!');
-      alert('✅ File saved successfully!');
-      
-    } catch (downloadError) {
-      console.error('❌ Download error:', downloadError);
-      // Last resort: Direct download
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 5000);
-      
-      alert('✅ File saved successfully!');
-    }
-    
-  } catch (error: any) {
-    console.error('❌ Save error DETAILED:', error);
-    console.error('❌ Error message:', error.message);
-    console.error('❌ Error stack:', error.stack);
-    alert('❌ Error saving file: ' + (error.message || 'Please try again.'));
+    alert('✅ Test successful!');
+  } catch (error) {
+    console.error('❌ Error:', error);
+    alert('❌ Error: ' + error.message);
   }
-  setIsSaving(false);
 };
 
   // ✅ OPEN: Import DOCX file
