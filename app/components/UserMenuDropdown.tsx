@@ -24,24 +24,22 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
   const textColor = darkMode ? "text-gray-300" : "text-[#1A1F2E]";
   const subTextColor = darkMode ? "text-gray-400" : "text-gray-600";
   const hoverBg = darkMode ? "hover:bg-[#C9A84C]/10" : "hover:bg-gray-100";
-  const modalBg = darkMode ? "bg-[#1A1F2E]" : "bg-white";
 
-  // ✅ Handle Feedback - opens EmailModal
-  const handleFeedbackClick = () => {
-    onClose();
-    setIsEmailModalOpen(true);
-  };
-
-  // ✅ Handle Help - shows help modal
-  const handleHelpClick = () => {
-    onClose();
-    setShowHelp(true);
-  };
-
-  // ✅ Handle Download - shows download modal
+  // ✅ FIXED: Instant response - close dropdown first, then open modal
   const handleDownloadClick = () => {
     onClose();
-    setShowDownload(true);
+    // Small delay to let dropdown close animation complete
+    setTimeout(() => setShowDownload(true), 50);
+  };
+
+  const handleHelpClick = () => {
+    onClose();
+    setTimeout(() => setShowHelp(true), 50);
+  };
+
+  const handleFeedbackClick = () => {
+    onClose();
+    setTimeout(() => setIsEmailModalOpen(true), 50);
   };
 
   return (
@@ -146,7 +144,7 @@ export default function UserMenuDropdown({ isOpen, onClose }: UserMenuDropdownPr
       )}
 
       {/* ============================================================ */}
-      {/* HELP & FEATURES MODAL - UPDATED */}
+      {/* HELP & FEATURES MODAL */}
       {/* ============================================================ */}
       {showHelp && (
         <Modal
